@@ -141,11 +141,9 @@ namespace ExpressionEvaluator
             operators.Add("<", new Operator("<", 3, 2, true, Expression.LessThan));
             operators.Add(">", new Operator(">", 3, 2, true, Expression.GreaterThan));
             operators.Add("<=", new Operator("<=", 3, 2, true, Expression.LessThanOrEqual));
-            operators.Add("=>", new Operator(">=", 3, 2, true, Expression.GreaterThanOrEqual));
+            operators.Add(">=", new Operator(">=", 3, 2, true, Expression.GreaterThanOrEqual));
             operators.Add("&&", new Operator("&&", 2, 2, true, Expression.And));
             operators.Add("||", new Operator("||", 1, 2, true, Expression.Or));
-
-
 
         }
 
@@ -287,13 +285,39 @@ namespace ExpressionEvaluator
                         else if (isNumeric(pstr[ptr]))
                         {
                             // Number identifiers start with a number and may contain numbers and decimals
-                            while (IsInBounds() && (isNumeric(pstr[ptr]) || pstr[ptr] == '.'))
+                            while (IsInBounds() && (isNumeric(pstr[ptr]) || pstr[ptr] == '.' || pstr[ptr] == 'd' || pstr[ptr] == 'f'))
                             {
                                 ptr++;
                             }
 
                             string token = pstr.Substring(lastptr, ptr - lastptr);
-                            tokenQueue.Enqueue(new Token() { value = double.Parse(token), isIdent = true, type = typeof(double) });
+
+                            Type ntype = typeof(System.Int32);
+                            object val = null;
+
+                            if (token.Contains('.')) ntype = typeof(System.Double);
+                            if (token.EndsWith("d") || token.EndsWith("f"))
+                            {
+                                if (token.EndsWith("d")) ntype = typeof(System.Double);
+                                if (token.EndsWith("f")) ntype = typeof(System.Single);
+                                token = token.Remove(token.Length - 1, 1);
+                            }
+
+                            switch (ntype.Name)
+                            {
+                                case "Int32":
+                                    val = int.Parse(token);
+                                    break;
+                                case "Double":
+                                    val = double.Parse(token);
+                                    break;
+                                case "Single":
+                                    val = float.Parse(token);
+                                    break;
+                            }
+
+
+                            tokenQueue.Enqueue(new Token() { value = val, isIdent = true, type = ntype });
                         }
                         else if (isAlpha(pstr[ptr]))
                         {
