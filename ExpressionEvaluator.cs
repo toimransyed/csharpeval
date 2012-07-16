@@ -131,6 +131,16 @@ namespace ExpressionEvaluator
             pstr = str;
         }
 
+        static Dictionary<Type, int> typePrecedence = new Dictionary<Type, int>();
+
+        static void ImplicitConversion(ref Expression le, ref Expression re)
+        {
+            if(typePrecedence.ContainsKey(le.Type) && typePrecedence.ContainsKey(re.Type))
+            {
+            if (typePrecedence[le.Type] > typePrecedence[re.Type]) re = Expression.Convert(re, le.Type);
+            if (typePrecedence[le.Type] < typePrecedence[re.Type]) le = Expression.Convert(le, re.Type);
+            }
+        }
 
         static void Initialize()
         {
@@ -144,7 +154,6 @@ namespace ExpressionEvaluator
                     return Expression.Call(le, mi);
                 }
                 ));
-
 
             operators.Add("!", new Operator("!", 6, 1, false, Expression.Not));
             operators.Add("^", new Operator("^", 6, 2, false, Expression.Power));
@@ -174,7 +183,6 @@ namespace ExpressionEvaluator
             operators.Add("&&", new Operator("&&", 2, 2, true, Expression.And));
             operators.Add("||", new Operator("||", 1, 2, true, Expression.Or));
 
-
             operators.Add("[", new Operator("[", 0, 2, true,
                 delegate(Expression le, Expression re)
                 {
@@ -182,6 +190,19 @@ namespace ExpressionEvaluator
                 }
                 ));
 
+            // for implicit conversion
+            typePrecedence.Add(typeof(int), 1);
+            typePrecedence.Add(typeof(float), 2);
+            typePrecedence.Add(typeof(double), 3);
+        }
+
+        /// <summary>
+        /// Returns a boolean specifying if the current string pointer is within the bounds of the expression string
+        /// </summary>
+        /// <returns></returns>
+        private bool IsInBounds()
+        {
+            return ptr < pstr.Length;
         }
 
         static bool is_operator(string c)
@@ -222,7 +243,13 @@ namespace ExpressionEvaluator
             return op;
         }
 
-
+        /// <summary>
+        /// Returns a boolean specifying if the character at the current pointer is a valid number
+        /// i.e. it starts with a number or a minus sign immediately followed by a number
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="ptr"></param>
+        /// <returns></returns>
         static bool isaNumber(string str, int ptr)
         {
             return 
@@ -230,6 +257,12 @@ namespace ExpressionEvaluator
                 isNumeric(str, ptr);
         }
 
+        /// <summary>
+        /// Returns a boolean specifying if the character at the current point is of the range '0'..'9'
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="ptr"></param>
+        /// <returns></returns>
         static bool isNumeric(string str, int ptr)
         {
             return (str[ptr] >= '0' && str[ptr] <= '9');
@@ -241,7 +274,9 @@ namespace ExpressionEvaluator
             return (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z');
         }
 
-
+        /// <summary>
+        /// Parses the expression and builds the token queue for compiling
+        /// </summary>
         public void Parse()
         {
             try
@@ -553,6 +588,10 @@ namespace ExpressionEvaluator
             }
         }
 
+        /// <summary>
+        /// Executes the compiled expression
+        /// </summary>
+        /// <returns></returns>
 #if TYPE_SAFE
         public T Eval()
 #else
@@ -563,8 +602,13 @@ namespace ExpressionEvaluator
             return compiled();
         }
 
-        public Expression CreateFunc()
+        /// <summary>
+        /// Builds the expression tree from the token queue
+        /// </summary>
+        /// <returns></returns>
+        public Expression BuildTree()
         {
+            // make a copy of the queue, so that we don't empty the original queue
             Queue<Token> tempQueue = new Queue<Token>(tokenQueue);
 
             Stack<Expression> exprStack = new Stack<Expression>();
@@ -575,15 +619,18 @@ namespace ExpressionEvaluator
 
                 if (t.isIdent)
                 {
+                    // handle numeric literals
                     exprStack.Push(Expression.Constant(t.value, t.type));
                 }
                 else if (t.isVariable)
                 {
+                    // handle variables
                     string token = (string)t.value;
                     exprStack.Push(Expression.Property(Expression.Constant(StateBag), (string)token));
                 }
                 else if (t.isOperator)
                 {
+                    // handle operators
                     Expression result = null;
                     Expression re = null;
                     Expression le = null;
@@ -592,19 +639,26 @@ namespace ExpressionEvaluator
                     switch (op.arguments)
                     {
                         case 1:
+                            // handle unary operators
                             le = exprStack.Pop();
+                            // check if this operator is a type conversion
                             if (op.tFunc != null)
                             {
+                                // call the type-conversion function
                                 result = op.tFunc(le, t.type);
                             }
                             else
                             {
+                                // call the unary function
                                 result = op.uFunc(le);
                             }
                             break;
                         case 2:
+                            // pop the right hand expression first
                             re = exprStack.Pop();
                             le = exprStack.Pop();
+                            // check if these expressions can be implicitly converted
+                            ImplicitConversion(ref le, ref re);
                             result = op.bFunc(le, re);
                             break;
                     }
@@ -614,6 +668,7 @@ namespace ExpressionEvaluator
 
             }
 
+            // we should only have one complete expression on the stack, otherwise, something went wrong
             if (exprStack.Count == 1)
             {
                 return exprStack.Pop();
@@ -626,15 +681,26 @@ namespace ExpressionEvaluator
             return null;
         }
 
+#if !TYPE_SAFE
+        /// <summary>
+        /// Returns a type-safe delegate that represents the compiled expression
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public Func<T> Compile<T>()
+        {
+            return Expression.Lambda<Func<T>>(BuildTree()).Compile();
+        }
+#endif
+
         private
 #if TYPE_SAFE
             Func<T> 
 #else
- compiledFunc
+            compiledFunc
 #endif
             Compile(Expression exp)
         {
-            if (tokenQueue.Count == 0) Parse();
 #if TYPE_SAFE
             Expression<Func<T>> f = Expression.Lambda<Func<T>>(exp);
 #else
@@ -643,14 +709,13 @@ namespace ExpressionEvaluator
             return f.Compile();
         }
 
-        private bool IsInBounds()
-        {
-            return ptr < pstr.Length;
-        }
 
+        /// <summary>
+        /// Compiles the expression and sets the internal cached function to the compiled expression
+        /// </summary>
         public void Compile()
         {
-            compiled = Compile(CreateFunc());
+            compiled = Compile(BuildTree());
         }
 
     }
