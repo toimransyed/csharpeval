@@ -97,8 +97,13 @@ namespace ExpressionEvaluator
         public Type type;
     }
 
+#if TYPE_SAFE
     public class Parser<T>
     {
+#else
+    public class Parser
+    {
+#endif
         string pstr;
         int ptr = 0;
         public object StateBag { get; set; }
@@ -106,7 +111,12 @@ namespace ExpressionEvaluator
         Stack<OpToken> opStack = new Stack<OpToken>();
         static OperatorCollection operators;
 
+#if TYPE_SAFE
         Func<T> compiled = null;
+#else
+        delegate object compiledFunc();
+        compiledFunc compiled = null;
+#endif
 
         public string StringToParse { get { return pstr; } set { pstr = value; compiled = null; tokenQueue.Clear(); } }
 
@@ -131,7 +141,7 @@ namespace ExpressionEvaluator
                 {
                     string s = (string)token.value;
                     MethodInfo mi = le.Type.GetMethod(s.Substring(0, s.IndexOf('(')));
-                        return Expression.Call(le, mi);
+                    return Expression.Call(le, mi);
                 }
                 ));
 
@@ -213,10 +223,18 @@ namespace ExpressionEvaluator
         }
 
 
-        static bool isNumeric(char chr)
+        static bool isaNumber(string str, int ptr)
         {
-            return (chr == '-') || (chr >= '0' && chr <= '9');
+            return 
+                ((str[ptr] == '-') && isNumeric(str, ptr+1)) || 
+                isNumeric(str, ptr);
         }
+
+        static bool isNumeric(string str, int ptr)
+        {
+            return (str[ptr] >= '0' && str[ptr] <= '9');
+        }
+
 
         static bool isAlpha(char chr)
         {
@@ -310,10 +328,10 @@ namespace ExpressionEvaluator
                             ptr++;
                         }
                         // Parse numbers
-                        else if (isNumeric(pstr[ptr]))
+                        else if (isaNumber(pstr, ptr))
                         {
                             // Number identifiers start with a number and may contain numbers and decimals
-                            while (IsInBounds() && (isNumeric(pstr[ptr]) || pstr[ptr] == '.' || pstr[ptr] == 'd' || pstr[ptr] == 'f'))
+                            while (IsInBounds() && (isaNumber(pstr, ptr) || pstr[ptr] == '.' || pstr[ptr] == 'd' || pstr[ptr] == 'f'))
                             {
                                 ptr++;
                             }
@@ -350,7 +368,7 @@ namespace ExpressionEvaluator
                         else if (isAlpha(pstr[ptr]))
                         {
                             // Alphanumeric identifiers start with a letter and may contain letter, numbers and decimals 
-                            while (IsInBounds() && (isAlpha(pstr[ptr]) || isNumeric(pstr[ptr]) || pstr[ptr] == '.'))
+                            while (IsInBounds() && (isAlpha(pstr[ptr]) || isNumeric(pstr,ptr) || pstr[ptr] == '.'))
                             {
                                 ptr++;
                             }
@@ -535,7 +553,11 @@ namespace ExpressionEvaluator
             }
         }
 
+#if TYPE_SAFE
         public T Eval()
+#else
+        public object Eval()
+#endif
         {
             if (compiled == null) Compile();
             return compiled();
@@ -604,10 +626,20 @@ namespace ExpressionEvaluator
             return null;
         }
 
-        private Func<T> Compile(Expression exp)
+        private
+#if TYPE_SAFE
+            Func<T> 
+#else
+ compiledFunc
+#endif
+            Compile(Expression exp)
         {
             if (tokenQueue.Count == 0) Parse();
+#if TYPE_SAFE
             Expression<Func<T>> f = Expression.Lambda<Func<T>>(exp);
+#else
+            Expression<compiledFunc> f = Expression.Lambda<compiledFunc>(Expression.Convert(exp, typeof(object)));
+#endif
             return f.Compile();
         }
 
