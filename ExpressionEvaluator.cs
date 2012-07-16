@@ -97,26 +97,15 @@ namespace ExpressionEvaluator
         public Type type;
     }
 
-#if TYPE_SAFE
-    public class Parser<T>
-    {
-#else
     public class Parser
     {
-#endif
         string pstr;
         int ptr = 0;
         public object StateBag { get; set; }
         Queue<Token> tokenQueue = new Queue<Token>();
         Stack<OpToken> opStack = new Stack<OpToken>();
         static OperatorCollection operators;
-
-#if TYPE_SAFE
-        Func<T> compiled = null;
-#else
-        delegate object compiledFunc();
-        compiledFunc compiled = null;
-#endif
+        Func<object> compiled = null;
 
         public string StringToParse { get { return pstr; } set { pstr = value; compiled = null; tokenQueue.Clear(); } }
 
@@ -131,7 +120,7 @@ namespace ExpressionEvaluator
             pstr = str;
         }
 
-        static Dictionary<Type, int> typePrecedence = new Dictionary<Type, int>();
+        static Dictionary<Type, int> typePrecedence;
 
         static void ImplicitConversion(ref Expression le, ref Expression re)
         {
@@ -191,6 +180,8 @@ namespace ExpressionEvaluator
                 ));
 
             // for implicit conversion
+            typePrecedence = new Dictionary<Type, int>();
+            typePrecedence.Add(typeof(byte), 0);
             typePrecedence.Add(typeof(int), 1);
             typePrecedence.Add(typeof(float), 2);
             typePrecedence.Add(typeof(double), 3);
@@ -589,14 +580,10 @@ namespace ExpressionEvaluator
         }
 
         /// <summary>
-        /// Executes the compiled expression
+        /// Executes the cached compiled expression
         /// </summary>
         /// <returns></returns>
-#if TYPE_SAFE
-        public T Eval()
-#else
         public object Eval()
-#endif
         {
             if (compiled == null) Compile();
             return compiled();
@@ -681,7 +668,6 @@ namespace ExpressionEvaluator
             return null;
         }
 
-#if !TYPE_SAFE
         /// <summary>
         /// Returns a type-safe delegate that represents the compiled expression
         /// </summary>
@@ -691,31 +677,15 @@ namespace ExpressionEvaluator
         {
             return Expression.Lambda<Func<T>>(BuildTree()).Compile();
         }
-#endif
-
-        private
-#if TYPE_SAFE
-            Func<T> 
-#else
-            compiledFunc
-#endif
-            Compile(Expression exp)
-        {
-#if TYPE_SAFE
-            Expression<Func<T>> f = Expression.Lambda<Func<T>>(exp);
-#else
-            Expression<compiledFunc> f = Expression.Lambda<compiledFunc>(Expression.Convert(exp, typeof(object)));
-#endif
-            return f.Compile();
-        }
-
 
         /// <summary>
-        /// Compiles the expression and sets the internal cached function to the compiled expression
+        /// Compiles the expression with an implicit conversion to the object Type and sets the internal function cache to the compiled expression
         /// </summary>
-        public void Compile()
+        /// <returns></returns>
+        public Func<object> Compile()
         {
-            compiled = Compile(BuildTree());
+            compiled = Expression.Lambda<Func<object>>(Expression.Convert(BuildTree(), typeof(object))).Compile();
+            return compiled;
         }
 
     }
