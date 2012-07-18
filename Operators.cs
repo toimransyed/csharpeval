@@ -11,33 +11,36 @@ namespace ExpressionEvaluator
 
     internal class MethodOperator : Operator<Func<Expression, string, List<Expression>, Expression>>
     {
-        public MethodOperator(string value, int precedence, int arguments, bool leftassoc, Func<Expression, string, List<Expression>, Expression> func)
-            : base(value, precedence, arguments, leftassoc, func)
+        public MethodOperator(string value, int precedence, bool leftassoc, Func<Expression, string, List<Expression>, Expression> func)
+            : base(value, precedence, leftassoc, func)
         {
         }
     }
 
     internal class BinaryOperator : Operator<Func<Expression, Expression, Expression>>
     {
-        public BinaryOperator(string value, int precedence, int arguments, bool leftassoc, Func<Expression, Expression, Expression> func)
-            : base(value, precedence, arguments, leftassoc, func)
+        public BinaryOperator(string value, int precedence, bool leftassoc, Func<Expression, Expression, Expression> func)
+            : base(value, precedence, leftassoc, func)
         {
+            arguments = 2;
         }
     }
 
     internal class UnaryOperator : Operator<Func<Expression, UnaryExpression>>
     {
-        public UnaryOperator(string value, int precedence, int arguments, bool leftassoc, Func<Expression, UnaryExpression> func)
-            : base(value, precedence, arguments, leftassoc, func)
+        public UnaryOperator(string value, int precedence, bool leftassoc, Func<Expression, UnaryExpression> func)
+            : base(value, precedence, leftassoc, func)
         {
+            arguments = 1;
         }
     }
 
     internal class TypeOperator : Operator<Func<Expression, Type, UnaryExpression>>
     {
-        public TypeOperator(string value, int precedence, int arguments, bool leftassoc, Func<Expression, Type, UnaryExpression> func)
-            : base(value, precedence, arguments, leftassoc, func)
+        public TypeOperator(string value, int precedence, bool leftassoc, Func<Expression, Type, UnaryExpression> func)
+            : base(value, precedence, leftassoc, func)
         {
+            arguments = 1;
         }
     }
 
@@ -58,11 +61,10 @@ namespace ExpressionEvaluator
         public int arguments { get; set; }
         public bool leftassoc { get; set; }
 
-        public Operator(string value, int precedence, int arguments, bool leftassoc, T func)
+        public Operator(string value, int precedence, bool leftassoc, T func)
         {
             this.value = value;
             this.precedence = precedence;
-            this.arguments = arguments;
             this.leftassoc = leftassoc;
             this.func = func;
         }
@@ -130,7 +132,7 @@ namespace ExpressionEvaluator
             Expression le = args.exprStack.Pop();
 
             Expression result = ((MethodOperator)args.op).func(le, nextToken, args.args);
-            args.args.Clear();
+
             return result;
         }
 
