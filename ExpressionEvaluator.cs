@@ -80,96 +80,20 @@ namespace ExpressionEvaluator
             pstr = str;
         }
 
-        static Dictionary<Type, int> typePrecedence;
+      
 
-        internal static void ImplicitConversion(ref Expression le, ref Expression re)
-        {
-            if (typePrecedence.ContainsKey(le.Type) && typePrecedence.ContainsKey(re.Type))
-            {
-                if (typePrecedence[le.Type] > typePrecedence[re.Type]) re = Expression.Convert(re, le.Type);
-                if (typePrecedence[le.Type] < typePrecedence[re.Type]) le = Expression.Convert(le, re.Type);
-            }
-        }
-
-        static Expression ImplicitConversion(Expression le, Type type)
-        {
-            if (typePrecedence.ContainsKey(le.Type) && typePrecedence.ContainsKey(type))
-            {
-                if (typePrecedence[le.Type] < typePrecedence[type]) return Expression.Convert(le, type);
-            }
-            return le;
-        }
-        static OpFuncServiceLocator opfuncs;
-
+    
         static void Initialize()
         {
-            opfuncs = new OpFuncServiceLocator();
             operators = new OperatorCollection();
 
-            operators.Add(".", new MethodOperator(".", 7, true,
-                delegate(Expression le, string token, List<Expression> args)
-                {
-                    List<Type> argTypes = new List<Type>();
-                    args.ForEach(x => argTypes.Add(x.Type));
-
-                    Expression instance = null;
-                    Type type = null;
-                    if (le.Type.Name == "RuntimeType")
-                    {
-                        type = ((Type)((ConstantExpression)le).Value);
-                    }
-                    else
-                    {
-                        type = le.Type;
-                        instance = le;
-                    }
-
-                    MethodInfo mi = type.GetMethod(token, argTypes.ToArray());
-                    if (mi != null)
-                    {
-                        ParameterInfo[] pi = mi.GetParameters();
-                        for (int i = 0; i < pi.Length; i++)
-                        {
-                            args[i] = ImplicitConversion(args[i], pi[i].ParameterType);
-                        }
-                        return Expression.Call(instance, mi, args);
-                    }
-                    else
-                    {
-                        PropertyInfo pi = type.GetProperty(token);
-                        if (pi != null)
-                        {
-                            return Expression.Property(instance, pi);
-                        }
-                        else
-                        {
-                            FieldInfo fi = type.GetField(token);
-                            if (fi != null)
-                                return Expression.Field(instance, fi);
-                        }
-                        throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, token));
-                    }
-                }
-                ));
-
+            operators.Add(".", new MethodOperator(".", 7, true, OperatorCustomExpressions.MemberAccess));
             operators.Add("!", new UnaryOperator("!", 6, false, Expression.Not));
             operators.Add("^", new BinaryOperator("^", 6, false, Expression.Power));
             operators.Add("*", new BinaryOperator("*", 5, true, Expression.Multiply));
             operators.Add("/", new BinaryOperator("/", 5, true, Expression.Divide));
             operators.Add("%", new BinaryOperator("%", 5, true, Expression.Modulo));
-            operators.Add("+", new BinaryOperator("+", 4, true,
-                delegate(Expression le, Expression re)
-                {
-                    if (le.Type == typeof(string) && re.Type == typeof(string))
-                    {
-                        return Expression.Add(le, re, typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }));
-                    }
-                    else
-                    {
-                        return Expression.Add(le, re);
-                    }
-                }
-                ));
+            operators.Add("+", new BinaryOperator("+", 4, true, OperatorCustomExpressions.Add));
             operators.Add("-", new BinaryOperator("-", 4, true, Expression.Subtract));
             operators.Add("==", new BinaryOperator("==", 3, true, Expression.Equal));
             operators.Add("!=", new BinaryOperator("!=", 3, true, Expression.NotEqual));
@@ -179,20 +103,7 @@ namespace ExpressionEvaluator
             operators.Add(">=", new BinaryOperator(">=", 3, true, Expression.GreaterThanOrEqual));
             operators.Add("&&", new BinaryOperator("&&", 2, true, Expression.And));
             operators.Add("||", new BinaryOperator("||", 1, true, Expression.Or));
-
-            operators.Add("[", new BinaryOperator("[", 0, true,
-                delegate(Expression le, Expression re)
-                {
-                    return Expression.ArrayAccess(le, re);
-                }
-                ));
-
-            // for implicit conversion
-            typePrecedence = new Dictionary<Type, int>();
-            typePrecedence.Add(typeof(byte), 0);
-            typePrecedence.Add(typeof(int), 1);
-            typePrecedence.Add(typeof(float), 2);
-            typePrecedence.Add(typeof(double), 3);
+            operators.Add("[", new BinaryOperator("[", 0, true, OperatorCustomExpressions.ArrayAccess));
         }
 
         /// <summary>
@@ -702,7 +613,7 @@ namespace ExpressionEvaluator
                     // handle operators
                     Expression result = null;
                     IOperator op = operators[(string)t.value];
-                    OpFuncDelegate opfunc = opfuncs.Resolve(op.GetType());
+                    OpFuncDelegate opfunc = OpFuncServiceLocator.Resolve(op.GetType());
                     for (int i = 0; i < t.argCount; i++)
                     {
                         args.Add(exprStack.Pop());

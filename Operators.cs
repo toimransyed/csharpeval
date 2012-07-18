@@ -8,6 +8,34 @@ using System.Reflection;
 
 namespace ExpressionEvaluator
 {
+    #region " Operators "
+
+    internal interface IOperator
+    {
+        string value { get; set; }
+        int precedence { get; set; }
+        int arguments { get; set; }
+        bool leftassoc { get; set; }
+    }
+
+    internal abstract class Operator<T> : IOperator
+    {
+        public T func;
+
+        public string value { get; set; }
+        public int precedence { get; set; }
+        public int arguments { get; set; }
+        public bool leftassoc { get; set; }
+
+        public Operator(string value, int precedence, bool leftassoc, T func)
+        {
+            this.value = value;
+            this.precedence = precedence;
+            this.leftassoc = leftassoc;
+            this.func = func;
+        }
+
+    }
 
     internal class MethodOperator : Operator<Func<Expression, string, List<Expression>, Expression>>
     {
@@ -44,33 +72,97 @@ namespace ExpressionEvaluator
         }
     }
 
-    internal interface IOperator
+    #endregion
+
+    #region " Custom Operator Expressions "
+
+    internal class OperatorCustomExpressions
     {
-        string value { get; set; }
-        int precedence { get; set; }
-        int arguments { get; set; }
-        bool leftassoc { get; set; }
-    }
-
-    internal abstract class Operator<T> : IOperator
-    {
-        public T func;
-
-        public string value { get; set; }
-        public int precedence { get; set; }
-        public int arguments { get; set; }
-        public bool leftassoc { get; set; }
-
-        public Operator(string value, int precedence, bool leftassoc, T func)
+        /// <summary>
+        /// Returns an Expression that accesses a member on an Expression
+        /// </summary>
+        /// <param name="le">The expression that contains the member to be accessed</param>
+        /// <param name="membername">The name of the member to access</param>
+        /// <param name="args">Optional list of arguments to be passed if the member is a method</param>
+        /// <returns></returns>
+        public static Expression MemberAccess(Expression le, string membername, List<Expression> args)
         {
-            this.value = value;
-            this.precedence = precedence;
-            this.leftassoc = leftassoc;
-            this.func = func;
+            List<Type> argTypes = new List<Type>();
+            args.ForEach(x => argTypes.Add(x.Type));
+
+            Expression instance = null;
+            Type type = null;
+            if (le.Type.Name == "RuntimeType")
+            {
+                type = ((Type)((ConstantExpression)le).Value);
+            }
+            else
+            {
+                type = le.Type;
+                instance = le;
+            }
+
+            MethodInfo mi = type.GetMethod(membername, argTypes.ToArray());
+            if (mi != null)
+            {
+                ParameterInfo[] pi = mi.GetParameters();
+                for (int i = 0; i < pi.Length; i++)
+                {
+                    args[i] = TypeConversion.Convert(args[i], pi[i].ParameterType);
+                }
+                return Expression.Call(instance, mi, args);
+            }
+            else
+            {
+                PropertyInfo pi = type.GetProperty(membername);
+                if (pi != null)
+                {
+                    return Expression.Property(instance, pi);
+                }
+                else
+                {
+                    FieldInfo fi = type.GetField(membername);
+                    if (fi != null)
+                        return Expression.Field(instance, fi);
+                }
+                throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
+            }
+        }
+
+        /// <summary>
+        /// Extends the Add Expression handler to handle string concatenation
+        /// </summary>
+        /// <param name="le"></param>
+        /// <param name="re"></param>
+        /// <returns></returns>
+        public static Expression Add(Expression le, Expression re)
+        {
+            if (le.Type == typeof(string) && re.Type == typeof(string))
+            {
+                return Expression.Add(le, re, typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }));
+            }
+            else
+            {
+                return Expression.Add(le, re);
+            }
+        }
+
+        /// <summary>
+        /// Returns an Expression that access a 1-dimensional index on an Array expression 
+        /// </summary>
+        /// <param name="le"></param>
+        /// <param name="re"></param>
+        /// <returns></returns>
+        public static Expression ArrayAccess(Expression le, Expression re)
+        {
+            return Expression.ArrayAccess(le, re);
         }
 
     }
 
+    #endregion
+
+    #region " Operator Collection "
 
     internal class OperatorCollection : Dictionary<string, IOperator>
     {
@@ -88,13 +180,19 @@ namespace ExpressionEvaluator
         }
     }
 
+    #endregion
+
+    #region " Operator Function Service Locator "
+
     internal delegate Expression OpFuncDelegate(
         OpFuncArgs args
     );
 
     internal class OpFuncServiceLocator
     {
-        public OpFuncServiceLocator()
+        static OpFuncServiceLocator instance = new OpFuncServiceLocator();
+
+        OpFuncServiceLocator()
         {
             typeActions.Add(typeof(MethodOperator), OpFuncServiceProviders.MethodOperatorFunc);
             typeActions.Add(typeof(TypeOperator), OpFuncServiceProviders.TypeOperatorFunc);
@@ -102,14 +200,23 @@ namespace ExpressionEvaluator
             typeActions.Add(typeof(BinaryOperator), OpFuncServiceProviders.BinaryOperatorFunc);
         }
 
-        public OpFuncDelegate Resolve(Type type)
+        public static OpFuncDelegate Resolve(Type type)
+        {
+            return instance.ResolveType(type);
+        }
+
+        OpFuncDelegate ResolveType(Type type)
         {
             return typeActions[type];
         }
 
-        public Dictionary<Type, OpFuncDelegate>
+        Dictionary<Type, OpFuncDelegate>
             typeActions = new Dictionary<Type, OpFuncDelegate>();
     }
+
+    #endregion
+
+    #region " Operator Function Service Providers "
 
     internal class OpFuncArgs
     {
@@ -158,12 +265,56 @@ namespace ExpressionEvaluator
         {
             Expression re = args.exprStack.Pop();
             Expression le = args.exprStack.Pop();
-            // check if these expressions can be implicitly converted
-            Parser.ImplicitConversion(ref le, ref re);
+            // perform implicit conversion on known types
+            TypeConversion.Convert(ref le, ref re);
             return ((BinaryOperator)args.op).func(le, re);
         }
 
 
     }
+    #endregion
 
+
+    class TypeConversion
+    {
+        Dictionary<Type, int> typePrecedence = null;
+        static TypeConversion instance = new TypeConversion();
+        /// <summary>
+        /// Performs implicit conversion between two expressions depending on their type precedence
+        /// </summary>
+        /// <param name="le"></param>
+        /// <param name="re"></param>
+        internal static void Convert(ref Expression le, ref Expression re)
+        {
+            if (instance.typePrecedence.ContainsKey(le.Type) && instance.typePrecedence.ContainsKey(re.Type))
+            {
+                if (instance.typePrecedence[le.Type] > instance.typePrecedence[re.Type]) re = Expression.Convert(re, le.Type);
+                if (instance.typePrecedence[le.Type] < instance.typePrecedence[re.Type]) le = Expression.Convert(le, re.Type);
+            }
+        }
+
+        /// <summary>
+        /// Performs implicit conversion on an expression against a specified type
+        /// </summary>
+        /// <param name="le"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        internal static Expression Convert(Expression le, Type type)
+        {
+            if (instance.typePrecedence.ContainsKey(le.Type) && instance.typePrecedence.ContainsKey(type))
+            {
+                if (instance.typePrecedence[le.Type] < instance.typePrecedence[type]) return Expression.Convert(le, type);
+            }
+            return le;
+        }
+
+        TypeConversion()
+        {
+            typePrecedence = new Dictionary<Type, int>();
+            typePrecedence.Add(typeof(byte), 0);
+            typePrecedence.Add(typeof(int), 1);
+            typePrecedence.Add(typeof(float), 2);
+            typePrecedence.Add(typeof(double), 3);
+        }
+    }
 }
