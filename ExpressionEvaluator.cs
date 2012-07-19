@@ -12,51 +12,57 @@ namespace ExpressionEvaluator
         public object value;
         public bool isIdent;
         public bool isOperator;
-        public bool isVariable;
         public bool isType;
         public Type type;
-        public bool isParameterizer;
-        public bool isProperty;
-        public bool isFunction;
         public int argCount;
-    }
-
-
-    internal class OpToken
-    {
-        public string value;
-        public Type type;
         public int ptr;
     }
+
+
+    internal class OpToken : Token
+    {
+        public OpToken()
+        {
+            isOperator = true;
+            argCount = 0;
+        }
+    }
+
+    class MemberToken : OpToken
+    {
+        public string name { get; set; }
+
+        public MemberToken()
+            : base()
+        {
+            value = ".";
+        }
+    }
+
 
     public class Parser
     {
         string pstr;
         int ptr = 0;
-        public object StateBag { get; set; }
         Queue<Token> tokenQueue = new Queue<Token>();
         Stack<OpToken> opStack = new Stack<OpToken>();
-        Stack<string> funcStack = new Stack<string>();
 
-        static Dictionary<string, object> typeRegistry = new Dictionary<string, object>();
+        Dictionary<string, object> typeRegistry = new Dictionary<string, object>();
 
-        public static void RegisterDefaultTypes()
+        public void RegisterDefaultTypes()
         {
-            if (typeRegistry.Count == 0)
-            {
-                typeRegistry.Add("bool", typeof(System.Boolean));
-                typeRegistry.Add("byte", typeof(System.Byte));
-                typeRegistry.Add("char", typeof(System.Char));
-                typeRegistry.Add("int", typeof(System.Int32));
-                typeRegistry.Add("decimal", typeof(System.Decimal));
-                typeRegistry.Add("double", typeof(System.Double));
-                typeRegistry.Add("float", typeof(System.Single));
-                typeRegistry.Add("object", typeof(System.Object));
-                typeRegistry.Add("string", typeof(System.String));
-                typeRegistry.Add("DateTime", typeof(System.DateTime));
-                typeRegistry.Add("Convert", typeof(System.Convert));
-                typeRegistry.Add("Math", typeof(System.Math));
-            }
+            typeRegistry.Add("bool", typeof(System.Boolean));
+            typeRegistry.Add("byte", typeof(System.Byte));
+            typeRegistry.Add("char", typeof(System.Char));
+            typeRegistry.Add("int", typeof(System.Int32));
+            typeRegistry.Add("decimal", typeof(System.Decimal));
+            typeRegistry.Add("double", typeof(System.Double));
+            typeRegistry.Add("float", typeof(System.Single));
+            typeRegistry.Add("object", typeof(System.Object));
+            typeRegistry.Add("string", typeof(System.String));
+            typeRegistry.Add("DateTime", typeof(System.DateTime));
+            typeRegistry.Add("Convert", typeof(System.Convert));
+            typeRegistry.Add("Math", typeof(System.Math));
         }
 
         public void RegisterType(string key, object type)
@@ -80,9 +86,9 @@ namespace ExpressionEvaluator
             pstr = str;
         }
 
-      
 
-    
+
+
         static void Initialize()
         {
             operators = new OperatorCollection();
@@ -103,7 +109,7 @@ namespace ExpressionEvaluator
             operators.Add(">=", new BinaryOperator(">=", 3, true, Expression.GreaterThanOrEqual));
             operators.Add("&&", new BinaryOperator("&&", 2, true, Expression.And));
             operators.Add("||", new BinaryOperator("||", 1, true, Expression.Or));
-            operators.Add("[", new BinaryOperator("[", 0, true, OperatorCustomExpressions.ArrayAccess));
+            //operators.Add("[", new BinaryOperator("[", 0, true, Expression.ArrayAccess));
         }
 
         /// <summary>
@@ -187,6 +193,7 @@ namespace ExpressionEvaluator
             return (chr >= 'A' & chr <= 'Z') || (chr >= 'a' & chr <= 'z');
         }
 
+
         /// <summary>
         /// Parses the expression and builds the token queue for compiling
         /// </summary>
@@ -195,8 +202,7 @@ namespace ExpressionEvaluator
             try
             {
                 tokenQueue.Clear();
-                Stack<int> argCountStack = new Stack<int>();
-                int argCount = 0;
+
                 while (IsInBounds())
                 {
                     string op = "";
@@ -282,19 +288,26 @@ namespace ExpressionEvaluator
                         {
                             bool pe = false;
 
+
                             while (opStack.Count > 0)
                             {
-                                if (opStack.Peek().value == "(")
+                                if ((string)opStack.Peek().value == "(")
                                 {
+                                    OpToken temp = opStack.Pop();
+                                    Token lastToken = opStack.Peek();
+                                    if (lastToken.GetType() == typeof(MemberToken))
+                                    {
+                                        MemberToken lastmember = (MemberToken)lastToken;
+                                        if (lastmember != null) lastmember.argCount++;
+                                    }
+                                    opStack.Push(temp);
                                     pe = true;
                                     break;
                                 }
                                 else
                                 {
                                     OpToken popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type, argCount = argCount });
-                                    if (argCountStack.Count > 0)
-                                        argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
                                 }
 
                             }
@@ -305,9 +318,6 @@ namespace ExpressionEvaluator
                                 throw new Exception("Parenthesis mismatch");
                             }
 
-                            argCount++;
-                            //tokenQueue.Enqueue(new Token() { value = ",", isParameterizer = true });
-
                             ptr++;
                         }
                         // Member accessor
@@ -317,20 +327,14 @@ namespace ExpressionEvaluator
                             {
                                 OpToken sc = opStack.Peek();
                                 // if the last operator was also a Member accessor pop it on the tokenQueue
-                                if (sc.value == ".")
+                                if ((string)sc.value == ".")
                                 {
                                     OpToken popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type, argCount = argCount });
-                                    if (argCountStack.Count > 0)
-                                        argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
                                 }
                             }
 
-                            // Save the current argument count as we are starting a new function/property
-                            argCountStack.Push(argCount);
-                            argCount = 0;
-
-                            opStack.Push(new OpToken() { value = "." });
+                            opStack.Push(new MemberToken());
                             ptr++;
                         }
                         // Parse numbers
@@ -380,9 +384,20 @@ namespace ExpressionEvaluator
                             }
 
                             string token = pstr.Substring(lastptr, ptr - lastptr);
+                            MemberToken mToken = null;
 
+                            if (opStack.Count > 0)
+                            {
+                                OpToken opToken = opStack.Peek();
+                                if (opToken.GetType() == typeof(MemberToken))
+                                    mToken = (MemberToken)opToken;
+                            }
 
-                            if (typeRegistry.ContainsKey(token))
+                            if ((mToken != null) && (mToken.name == null))
+                            {
+                                mToken.name = token;
+                            }
+                            else if (typeRegistry.ContainsKey(token))
                             {
                                 if (typeRegistry[token].GetType().Name == "RuntimeType")
                                 {
@@ -405,38 +420,45 @@ namespace ExpressionEvaluator
                                 }
                                 else
                                 {
-                                    if (opStack.Count > 0 && opStack.Peek().value == ".")
-                                        tokenQueue.Enqueue(new Token() { value = token });
-                                    else
-                                        throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
+                                    throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
                                 }
                             }
-                            //}
                         }
                         else if (pstr[ptr] == '[')
                         {
-                            opStack.Push(new OpToken() { value = "[" });
+                            opStack.Push(new OpToken() { value = "[", ptr = ptr + 1 });
                             ptr++;
                         }
                         else if (pstr[ptr] == ']')
                         {
                             bool pe = false;
-                            // Until the token at the top of the stack is a left parenthesis,
+                            // Until the token at the top of the stack is a left bracket,
                             // pop operators off the stack onto the output queue
                             while (opStack.Count > 0)
                             {
                                 OpToken sc = opStack.Peek();
-                                if (sc.value == "[")
+                                if ((string)sc.value == "[")
                                 {
+                                    OpToken temp = opStack.Pop();
+                                    if (opStack.Count > 0)
+                                    {
+                                        Token lastToken = opStack.Peek();
+                                        if (lastToken.GetType() == typeof(MemberToken))
+                                        {
+                                            MemberToken lastmember = (MemberToken)lastToken;
+                                            // check if there was anything significant between the opening paren and the closing paren
+                                            // If so, then we have an argument... This isn't the best approach perhaps, but it works...
+                                            if (pstr.Substring(sc.ptr, ptr - sc.ptr).Trim().Length > 0) lastmember.argCount++;
+                                        }
+                                    }
+                                    opStack.Push(temp);
                                     pe = true;
                                     break;
                                 }
                                 else
                                 {
                                     OpToken popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type, argCount = argCount });
-                                    if (argCountStack.Count > 0)
-                                        argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
                                 }
                             }
 
@@ -448,34 +470,48 @@ namespace ExpressionEvaluator
 
                             // Pop the left parenthesis from the stack, but not onto the output queue.
                             OpToken lopToken = opStack.Pop();
-                            tokenQueue.Enqueue(new Token() { value = lopToken.value, isOperator = true, type = lopToken.type });
+                            //tokenQueue.Enqueue(lopToken);
+
 
                             ptr++;
                         }
                         else if (pstr[ptr] == '(')
                         {
-                            opStack.Push(new OpToken() { value = "(" });
+                            opStack.Push(new OpToken() { value = "(", ptr = ptr + 1 });
                             ptr++;
                         }
                         else if (pstr[ptr] == ')')
                         {
                             bool pe = false;
+                            //int poppedtokens = 0;
                             // Until the token at the top of the stack is a left parenthesis,
                             // pop operators off the stack onto the output queue
                             while (opStack.Count > 0)
                             {
                                 OpToken sc = opStack.Peek();
-                                if (sc.value == "(")
+                                if ((string)sc.value == "(")
                                 {
+                                    OpToken temp = opStack.Pop();
+                                    if (opStack.Count > 0)
+                                    {
+                                        Token lastToken = opStack.Peek();
+                                        if (lastToken.GetType() == typeof(MemberToken))
+                                        {
+                                            MemberToken lastmember = (MemberToken)lastToken;
+                                            // check if there was anything significant between the opening paren and the closing paren
+                                            // If so, then we have an argument... This isn't the best approach perhaps, but it works...
+                                            if (pstr.Substring(sc.ptr, ptr - sc.ptr).Trim().Length > 0) lastmember.argCount++;
+                                        }
+                                    }
+                                    opStack.Push(temp);
                                     pe = true;
                                     break;
                                 }
                                 else
                                 {
                                     OpToken popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type, argCount = argCount });
-                                    if (argCountStack.Count > 0)
-                                        argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
+                                    // poppedtokens++;
                                 }
                             }
 
@@ -492,12 +528,10 @@ namespace ExpressionEvaluator
                             if (opStack.Count > 0)
                             {
                                 OpToken popToken = opStack.Peek();
-                                if (popToken.value == ".")
+                                if ((string)popToken.value == ".")
                                 {
                                     popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type, argCount = argCount });
-                                    if (argCountStack.Count > 0)
-                                        argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
                                 }
                             }
                             ptr++;
@@ -508,15 +542,14 @@ namespace ExpressionEvaluator
                             {
                                 OpToken sc = opStack.Peek();
 
-                                if (is_operator(sc.value) &&
+                                if (is_operator((string)sc.value) &&
                                      ((operators[op].leftassoc &&
-                                       (operators[op].precedence <= operators[sc.value].precedence)) ||
-                                       (operators[op].precedence < operators[sc.value].precedence))
+                                       (operators[op].precedence <= operators[(string)sc.value].precedence)) ||
+                                       (operators[op].precedence < operators[(string)sc.value].precedence))
                                     )
                                 {
                                     OpToken popToken = opStack.Pop();
-                                    tokenQueue.Enqueue(new Token() { value = popToken.value, isOperator = true, type = popToken.type });
-                                    argCount = argCountStack.Pop();
+                                    tokenQueue.Enqueue(popToken);
                                 }
                                 else
                                 {
@@ -524,8 +557,6 @@ namespace ExpressionEvaluator
                                 }
                             }
 
-                            argCountStack.Push(argCount);
-                            argCount = 0;
                             opStack.Push(new OpToken() { value = op });
                             ptr++;
                         }
@@ -543,13 +574,13 @@ namespace ExpressionEvaluator
                 while (opStack.Count > 0)
                 {
                     OpToken sc = opStack.Peek();
-                    if (sc.value == "(" || sc.value == ")")
+                    if ((string)sc.value == "(" || (string)sc.value == ")")
                     {
                         throw new Exception("Paren mismatch");
                     }
 
                     sc = opStack.Pop();
-                    tokenQueue.Enqueue(new Token() { value = sc.value, isOperator = true, type = sc.type });
+                    tokenQueue.Enqueue(sc);
                 }
 
             }
@@ -581,7 +612,7 @@ namespace ExpressionEvaluator
             List<Expression> args = new List<Expression>();
             Stack<String> literalStack = new Stack<String>();
 
-            var q = tempQueue.Select(x => x.value.ToString() + (x.isOperator ? ":" + x.argCount.ToString() : "") );
+            var q = tempQueue.Select(x => x.value.ToString() + (x.GetType() == typeof(MemberToken) ? ":" + ((MemberToken)x).name : ""));
             System.Diagnostics.Debug.WriteLine(string.Join("][", q.ToArray()));
 
 
@@ -598,16 +629,16 @@ namespace ExpressionEvaluator
                 {
                     exprStack.Push(Expression.Constant(t.value));
                 }
-                else if (t.isVariable)
-                {
-                    // handle variables
-                    string token = (string)t.value;
-                    exprStack.Push(Expression.Property(Expression.Constant(StateBag), (string)token));
-                }
-                else if (t.isParameterizer)
-                {
-                    //exprStack.Push(Expression.Property(Expression.Constant(StateBag), (string)token));
-                }
+                //else if (t.isVariable)
+                //{
+                //    // handle variables
+                //    string token = (string)t.value;
+                //    exprStack.Push(Expression.Property(Expression.Constant(StateBag), (string)token));
+                //}
+                //else if (t.isParameterizer)
+                //{
+                //    //exprStack.Push(Expression.Property(Expression.Constant(StateBag), (string)token));
+                //}
                 else if (t.isOperator)
                 {
                     // handle operators
@@ -620,15 +651,15 @@ namespace ExpressionEvaluator
                     }
                     // Arguments are in reverse order
                     args.Reverse();
-                    result = opfunc(new OpFuncArgs() { tempQueue = tempQueue, exprStack = exprStack, t = t, op = op, args = args, literalStack = literalStack });
+                    result = opfunc(new OpFuncArgs() { tempQueue = tempQueue, exprStack = exprStack, t = t, op = op, args = args });
                     args.Clear();
                     exprStack.Push(result);
                 }
-                else
-                {
-                    //tempQueue.Enqueue(t);
-                    literalStack.Push((string)t.value);
-                }
+                //else
+                //{
+                //    //tempQueue.Enqueue(t);
+                //    literalStack.Push((string)t.value);
+                //}
 
             }
 
@@ -655,6 +686,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Func<T> Compile<T>()
         {
+            if (tokenQueue.Count == 0) Parse();
             return Expression.Lambda<Func<T>>(BuildTree()).Compile();
         }
 
@@ -664,6 +696,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Func<object> Compile()
         {
+            if (tokenQueue.Count == 0) Parse();
             compiled = Expression.Lambda<Func<object>>(Expression.Convert(BuildTree(), typeof(object))).Compile();
             return compiled;
         }

@@ -114,18 +114,37 @@ namespace ExpressionEvaluator
             }
             else
             {
+                Expression exp = null;
+
                 PropertyInfo pi = type.GetProperty(membername);
                 if (pi != null)
                 {
-                    return Expression.Property(instance, pi);
+                    exp = Expression.Property(instance, pi);
                 }
                 else
                 {
                     FieldInfo fi = type.GetField(membername);
                     if (fi != null)
-                        return Expression.Field(instance, fi);
+                    {
+                        exp = Expression.Field(instance, fi);
+                    }
                 }
-                throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
+
+                if (exp != null)
+                {
+                    if (args.Count > 0)
+                    {
+                        return Expression.ArrayAccess(exp, args);
+                    }
+                    else
+                    {
+                        return exp;
+                    }
+                }
+                else
+                {
+                    throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
+                }
             }
         }
 
@@ -155,7 +174,9 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public static Expression ArrayAccess(Expression le, Expression re)
         {
-            return Expression.ArrayAccess(le, re);
+            var indexes = new List<Expression>();
+            indexes.Add(re);
+            return Expression.ArrayAccess(le, indexes);
         }
 
     }
@@ -222,7 +243,7 @@ namespace ExpressionEvaluator
     {
         public Queue<Token> tempQueue;
         public Stack<Expression> exprStack;
-        public Stack<String> literalStack;
+        //public Stack<String> literalStack;
         public Token t;
         public IOperator op;
         public List<Expression> args;
@@ -234,8 +255,8 @@ namespace ExpressionEvaluator
             OpFuncArgs args
           )
         {
-            var nextToken = args.literalStack.Pop();
-
+            //var nextToken = args.literalStack.Pop();
+            var nextToken = ((MemberToken)args.t).name;
             Expression le = args.exprStack.Pop();
 
             Expression result = ((MethodOperator)args.op).func(le, nextToken, args.args);
