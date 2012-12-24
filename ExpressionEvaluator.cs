@@ -93,20 +93,31 @@ namespace ExpressionEvaluator
         {
             operators = new OperatorCollection();
 
-            operators.Add(".", new MethodOperator(".", 7, true, OperatorCustomExpressions.MemberAccess));
-            operators.Add("!", new UnaryOperator("!", 6, false, Expression.Not));
-            operators.Add("^", new BinaryOperator("^", 6, false, Expression.Power));
-            operators.Add("*", new BinaryOperator("*", 5, true, Expression.Multiply));
-            operators.Add("/", new BinaryOperator("/", 5, true, Expression.Divide));
-            operators.Add("%", new BinaryOperator("%", 5, true, Expression.Modulo));
-            operators.Add("+", new BinaryOperator("+", 4, true, OperatorCustomExpressions.Add));
-            operators.Add("-", new BinaryOperator("-", 4, true, Expression.Subtract));
-            operators.Add("==", new BinaryOperator("==", 3, true, Expression.Equal));
-            operators.Add("!=", new BinaryOperator("!=", 3, true, Expression.NotEqual));
-            operators.Add("<", new BinaryOperator("<", 3, true, Expression.LessThan));
-            operators.Add(">", new BinaryOperator(">", 3, true, Expression.GreaterThan));
-            operators.Add("<=", new BinaryOperator("<=", 3, true, Expression.LessThanOrEqual));
-            operators.Add(">=", new BinaryOperator(">=", 3, true, Expression.GreaterThanOrEqual));
+            operators.Add(".", new MethodOperator(".", 12, true, OperatorCustomExpressions.MemberAccess));
+            operators.Add("!", new UnaryOperator("!", 11, false, Expression.Not));
+            operators.Add("^", new BinaryOperator("^", 11, false, Expression.Power));
+            
+            operators.Add("*", new BinaryOperator("*", 10, true, Expression.Multiply));
+            operators.Add("/", new BinaryOperator("/", 10, true, Expression.Divide));
+            operators.Add("%", new BinaryOperator("%", 10, true, Expression.Modulo));
+            
+            operators.Add("+", new BinaryOperator("+", 9, true, OperatorCustomExpressions.Add));
+            operators.Add("-", new BinaryOperator("-", 9, true, Expression.Subtract));
+
+            operators.Add("<<", new BinaryOperator("<<", 8, true, Expression.LeftShift));
+            operators.Add(">>", new BinaryOperator(">>", 8, true, Expression.RightShift));
+
+            operators.Add("<", new BinaryOperator("<", 7, true, Expression.LessThan));
+            operators.Add(">", new BinaryOperator(">", 7, true, Expression.GreaterThan));
+            operators.Add("<=", new BinaryOperator("<=", 7, true, Expression.LessThanOrEqual));
+            operators.Add(">=", new BinaryOperator(">=", 7, true, Expression.GreaterThanOrEqual));
+
+            operators.Add("==", new BinaryOperator("==", 6, true, Expression.Equal));
+            operators.Add("!=", new BinaryOperator("!=", 6, true, Expression.NotEqual));
+
+            operators.Add("&", new BinaryOperator("&", 5, true, Expression.And));
+            // ^ logical xor 4
+            operators.Add("|", new BinaryOperator("|", 3, true, Expression.Or));
             operators.Add("&&", new BinaryOperator("&&", 2, true, Expression.AndAlso));
             operators.Add("||", new BinaryOperator("||", 1, true, Expression.OrElse));
             //operators.Add("[", new BinaryOperator("[", 0, true, Expression.ArrayAccess));
