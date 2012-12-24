@@ -107,8 +107,8 @@ namespace ExpressionEvaluator
             operators.Add(">", new BinaryOperator(">", 3, true, Expression.GreaterThan));
             operators.Add("<=", new BinaryOperator("<=", 3, true, Expression.LessThanOrEqual));
             operators.Add(">=", new BinaryOperator(">=", 3, true, Expression.GreaterThanOrEqual));
-            operators.Add("&&", new BinaryOperator("&&", 2, true, Expression.And));
-            operators.Add("||", new BinaryOperator("||", 1, true, Expression.Or));
+            operators.Add("&&", new BinaryOperator("&&", 2, true, Expression.AndAlso));
+            operators.Add("||", new BinaryOperator("||", 1, true, Expression.OrElse));
             //operators.Add("[", new BinaryOperator("[", 0, true, Expression.ArrayAccess));
         }
 
