@@ -86,6 +86,7 @@ namespace ExpressionEvaluator
             try
             {
                 _tokenQueue.Clear();
+                _ptr = 0;
 
                 while (IsInBounds())
                 {

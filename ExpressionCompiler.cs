@@ -11,8 +11,12 @@ namespace ExpressionEvaluator
 
         public string StringToParse
         {
-            get { return Parser.StringToParse; } 
-            set { Parser.StringToParse = value; }
+            get { return Parser.StringToParse; }
+            set { 
+                Parser.StringToParse = value;
+                Expression = null;
+                ClearCompiledMethod();
+            }
         }
 
         public void RegisterDefaultTypes()
@@ -29,6 +33,8 @@ namespace ExpressionEvaluator
         {
             return Parser.BuildTree();
         }
+
+        protected abstract void ClearCompiledMethod();
 
         public void Parse()
         {
