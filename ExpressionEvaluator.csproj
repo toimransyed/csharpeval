@@ -50,9 +50,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExpressionEvaluator.cs" />
-    <Compile Include="Operators.cs" />
+    <Compile Include="CompiledExpression.cs" />
+    <Compile Include="ExpressionCompiler.cs" />
+    <Compile Include="Operators\BinaryOperator.cs" />
+    <Compile Include="Operators\IndexOperator.cs" />
+    <Compile Include="Operators\IOperator.cs" />
+    <Compile Include="Operators\MethodOperator.cs" />
+    <Compile Include="Operators\TypeOperator.cs" />
+    <Compile Include="Operators\UnaryOperator.cs" />
+    <Compile Include="Parser.cs" />
+    <Compile Include="HelperMethods.cs" />
+    <Compile Include="Operators\OperatorCollection.cs" />
+    <Compile Include="Operators\OperatorCustomExpressions.cs" />
+    <Compile Include="Operators\Operator.cs" />
+    <Compile Include="Operators\OpFuncArgs.cs" />
+    <Compile Include="Operators\OpFuncServiceLocator.cs" />
+    <Compile Include="Operators\OpFuncServiceProviders.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tokens\MemberToken.cs" />
+    <Compile Include="Tokens\OpToken.cs" />
+    <Compile Include="Tokens\Token.cs" />
+    <Compile Include="TypeConversion.cs" />
+    <Compile Include="TypeRegistry.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
