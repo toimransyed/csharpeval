@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Dynamic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace ExpressionEvaluator.Operators
 {
@@ -28,7 +32,14 @@ namespace ExpressionEvaluator.Operators
             else
             {
                 type = le.Type;
-                instance = le;
+                if (type.Name == "ExpandoObject")
+                {
+                    instance = le;
+                }
+                else
+                {
+                    instance = le;
+                }
             }
 
             MethodInfo mi = type.GetMethod(membername, argTypes.ToArray());
@@ -45,35 +56,64 @@ namespace ExpressionEvaluator.Operators
             {
                 Expression exp = null;
 
-                PropertyInfo pi = type.GetProperty(membername);
-                if (pi != null)
-                {
-                    exp = Expression.Property(instance, pi);
-                }
-                else
-                {
-                    FieldInfo fi = type.GetField(membername);
-                    if (fi != null)
-                    {
-                        exp = Expression.Field(instance, fi);
-                    }
-                }
-
-                if (exp != null)
+                if (type.Name == "ExpandoObject" || type.Name == "Object")
                 {
                     if (args.Count > 0)
                     {
-                        return Expression.ArrayAccess(exp, args);
+                        var expArgs = new List<Expression> { instance };
+                        expArgs.AddRange(args);
+                        var binderM = Microsoft.CSharp.RuntimeBinder.Binder.InvokeMember(CSharpBinderFlags.None, membername,
+                                                                 null, type,
+                                                                 expArgs.Select(x => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                            //new[] { 
+                            //    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            //    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            //}
+                    );
+                        return Expression.Dynamic(binderM, typeof(object), expArgs);
+
                     }
                     else
                     {
-                        return exp;
+                        var binder = Microsoft.CSharp.RuntimeBinder.Binder.GetMember(CSharpBinderFlags.None, membername,
+                                                                                     type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
+                        return Expression.Dynamic(binder, typeof(object), instance);
                     }
+
                 }
                 else
                 {
-                    throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
+                    PropertyInfo pi = type.GetProperty(membername);
+                    if (pi != null)
+                    {
+                        exp = Expression.Property(instance, pi);
+                    }
+                    else
+                    {
+                        FieldInfo fi = type.GetField(membername);
+                        if (fi != null)
+                        {
+                            exp = Expression.Field(instance, fi);
+                        }
+                    }
+
+                    if (exp != null)
+                    {
+                        if (args.Count > 0)
+                        {
+                            return Expression.ArrayAccess(exp, args);
+                        }
+                        else
+                        {
+                            return exp;
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
+                    }
                 }
+
             }
         }
 

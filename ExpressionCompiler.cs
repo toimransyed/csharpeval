@@ -41,5 +41,13 @@ namespace ExpressionEvaluator
             Parser.Parse();
         }
 
+        public void RegisterNamespace(string p)
+        {
+        }
+
+        public void RegisterAssembly(System.Reflection.Assembly assembly)
+        {
+        }
+
     }
 }

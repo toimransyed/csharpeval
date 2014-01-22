@@ -24,11 +24,14 @@ namespace ExpressionEvaluator
             set { _typeRegistry = value; }
         }
 
+        public object Global { get; set; }
+
         public string StringToParse { get { return _pstr; } set { _pstr = value; _tokenQueue.Clear(); } }
 
         public Parser()
         {
             Initialize();
+            TypeRegistry = new TypeRegistry();
         }
 
         public Parser(string str)
@@ -76,6 +79,13 @@ namespace ExpressionEvaluator
         private bool IsInBounds()
         {
             return _ptr < _pstr.Length;
+        }
+
+        public Expression Parse(string expression)
+        {
+            StringToParse = expression;
+            Parse();
+            return BuildTree();
         }
 
         /// <summary>
@@ -354,7 +364,21 @@ namespace ExpressionEvaluator
                                 }
                                 else
                                 {
-                                    throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
+                                    _tokenQueue.Enqueue(new Token() { Value = Global, IsType = true });
+                                    if (_opStack.Count > 0)
+                                    {
+                                        OpToken sc = _opStack.Peek();
+                                        // if the last operator was also a Member accessor pop it on the tokenQueue
+                                        if ((string)sc.Value == ".")
+                                        {
+                                            OpToken popToken = _opStack.Pop();
+                                            _tokenQueue.Enqueue(popToken);
+                                        }
+                                    }
+
+                                    _opStack.Push(new MemberToken());
+                                    _ptr -= token.Length;
+                                    //throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
                                 }
                             }
                         }

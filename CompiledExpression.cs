@@ -22,7 +22,7 @@ namespace ExpressionEvaluator
 
         public Func<T> Compile()
         {
-            if (Expression == null) Expression = BuildTree(); 
+            if (Expression == null) Expression = BuildTree();
             return Expression.Lambda<Func<T>>(Expression).Compile();
         }
 
@@ -36,6 +36,15 @@ namespace ExpressionEvaluator
             if (_compiledMethod == null) _compiledMethod = Compile();
             return _compiledMethod();
         }
+
+        public object Global
+        {
+            set
+            {
+                Parser.Global = value;
+            }
+        }
+ 
     }
 
     public class CompiledExpression : ExpressionCompiler
@@ -46,11 +55,12 @@ namespace ExpressionEvaluator
         {
             Parser = new Parser();
             Parser.TypeRegistry = TypeRegistry;
+
         }
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression);
+            Parser = new Parser(expression); 
             Parser.TypeRegistry = TypeRegistry;
         }
 
@@ -69,6 +79,14 @@ namespace ExpressionEvaluator
         {
             if (_compiledMethod == null) _compiledMethod = Compile();
             return _compiledMethod();
+        }
+
+        public object Global
+        {
+            set
+            {
+                Parser.Global = value;
+            }
         }
 
     }
