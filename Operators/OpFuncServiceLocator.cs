@@ -14,6 +14,8 @@ namespace ExpressionEvaluator.Operators
             _typeActions.Add(typeof(TypeOperator), OpFuncServiceProviders.TypeOperatorFunc);
             _typeActions.Add(typeof(UnaryOperator), OpFuncServiceProviders.UnaryOperatorFunc);
             _typeActions.Add(typeof(BinaryOperator), OpFuncServiceProviders.BinaryOperatorFunc);
+            _typeActions.Add(typeof(TernaryOperator), OpFuncServiceProviders.TernaryOperatorFunc);
+            _typeActions.Add(typeof(TernarySeparatorOperator), OpFuncServiceProviders.TernarySeparatorOperatorFunc);
         }
 
         public static Func<OpFuncArgs, Expression> Resolve(Type type)

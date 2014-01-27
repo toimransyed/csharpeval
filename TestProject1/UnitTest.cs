@@ -64,8 +64,8 @@ namespace ExpressionEvaluator.Tests
         public void AddImplicitIntegersReturnsInteger()
         {
             var str = "1 + 1";
-            Parser parser = new Parser(str);
-            var ret = parser.Eval();
+            var c = new CompiledExpression(str);
+            var ret = c.Eval();
             Assert.IsTrue(ret.GetType().Name == "System.Int32");
             Assert.IsTrue(Convert.ToInt32(ret) == 2);
         }
@@ -74,18 +74,18 @@ namespace ExpressionEvaluator.Tests
         public void Add()
         {
             var str = "1 + 1";
-            Parser parser = new Parser(str);
-            var ret = parser.Eval();
-            Assert.IsTrue(Convert.ToInt32(ret) == 2);
+            var c = new CompiledExpression<int>(str);
+            var ret = c.Eval();
+            Assert.IsTrue(ret == 2);
         }
 
         [TestMethod]
         public void Subtract()
         {
-            var str = "1 + 1";
-            Parser parser = new Parser(str);
-            var ret = parser.Eval();
-            Assert.IsTrue(Convert.ToInt32(ret) == 2);
+            var str = "1 - 1";
+            var c = new CompiledExpression<int>(str);
+            var ret = c.Eval();
+            Assert.IsTrue(Convert.ToInt32(ret) == 0);
         }
 
     }
