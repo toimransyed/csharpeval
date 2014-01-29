@@ -277,6 +277,8 @@ namespace ExpressionEvaluator
                         // Parse numbers
                         else if (HelperMethods.IsANumber(_pstr, _ptr))
                         {
+
+
                             // Number identifiers start with a number and may contain numbers and decimals
                             while (IsInBounds() && (HelperMethods.IsANumber(_pstr, _ptr) || _pstr[_ptr] == '.' || _pstr[_ptr] == 'd' || _pstr[_ptr] == 'f' || _pstr[_ptr] == 'L'))
                             {
@@ -297,19 +299,21 @@ namespace ExpressionEvaluator
                                 token = token.Remove(token.Length - 1, 1);
                             }
 
+                            var x = 2L;
+
                             switch (ntype.Name)
                             {
                                 case "Int32":
-                                    val = int.Parse(token);
+                                    val = int.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
                                     break;
                                 case "Int64":
-                                    val = long.Parse(token);
+                                    val = long.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
                                     break;
                                 case "Double":
-                                    val = double.Parse(token);
+                                    val = double.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
                                     break;
                                 case "Single":
-                                    val = float.Parse(token);
+                                    val = float.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
                                     break;
                             }
 
@@ -321,7 +325,7 @@ namespace ExpressionEvaluator
                         {
                             _ptr++;
 
-                            while (IsInBounds() && (HelperMethods.IsAlpha(_pstr[_ptr]) || HelperMethods.IsNumeric(_pstr, _ptr)))
+                            while (IsInBounds() && (HelperMethods.IsAlpha(_pstr[_ptr]) || (_pstr[_ptr] == '_') || HelperMethods.IsNumeric(_pstr, _ptr)))
                             {
                                 _ptr++;
                             }
@@ -584,7 +588,7 @@ namespace ExpressionEvaluator
             Stack<String> literalStack = new Stack<String>();
 
 #if DEBUG
-            var q = tempQueue.Select(x => x.Value.ToString() + (x.GetType() == typeof(MemberToken) ? ":" + ((MemberToken)x).Name : ""));
+            var q = tempQueue.Select(x => (x.Value ?? "<null>").ToString() + (x.GetType() == typeof(MemberToken) ? ":" + ((MemberToken)x).Name : ""));
             System.Diagnostics.Debug.WriteLine(string.Join("][", q.ToArray()));
 #endif
             int isCastPending = -1;
