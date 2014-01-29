@@ -115,10 +115,10 @@ namespace ExpressionEvaluator.Operators
                     }
                 }
 
-                }
-
             }
+
         }
+
 
         /// <summary>
         /// Extends the Add Expression handler to handle string concatenation
@@ -153,6 +153,18 @@ namespace ExpressionEvaluator.Operators
             }
 
             return Expression.ArrayAccess(le, re);
+        }
+
+
+        /// <summary>
+        /// Returns an Expression that access a 1-dimensional index on an Array expression 
+        /// </summary>
+        /// <param name="le"></param>
+        /// <param name="re"></param>
+        /// <returns></returns>
+        public static Expression TernarySeparator(Expression le)
+        {
+            return le;
         }
 
     }

@@ -12,4 +12,15 @@ namespace ExpressionEvaluator.Operators
             Arguments = 2;
         }
     }
+
+
+    internal class TernaryOperator : Operator<Func<Expression, Expression, Expression, Expression>>
+    {
+        public TernaryOperator(string value, int precedence, bool leftassoc,
+                              Func<Expression, Expression, Expression, Expression> func)
+            : base(value, precedence, leftassoc, func)
+        {
+            Arguments = 3;
+        }
+    }
 }

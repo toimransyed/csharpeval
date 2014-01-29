@@ -63,7 +63,9 @@ namespace ExpressionEvaluator
                     {"^", new BinaryOperator("^", 4, true, Expression.ExclusiveOr)},
                     {"|", new BinaryOperator("|", 3, true, Expression.Or)},
                     {"&&", new BinaryOperator("&&", 2, true, Expression.AndAlso)},
-                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse)}
+                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse)},
+                    {":", new TernarySeparatorOperator(":", 2, false, OperatorCustomExpressions.TernarySeparator)},
+                    {"?", new TernaryOperator("?", 1, false, Expression.Condition)}
                 };
 
             //operators.Add("^", new BinaryOperator("^", 11, false, Expression.Power));

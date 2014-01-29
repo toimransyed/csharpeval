@@ -104,12 +104,5 @@ namespace ExpressionEvaluator
             }
         }
 
-        public object Global
-        {
-            set
-            {
-                Parser.Global = value;
-            }
-        }
     }
 }

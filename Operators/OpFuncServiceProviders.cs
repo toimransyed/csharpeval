@@ -44,7 +44,20 @@ namespace ExpressionEvaluator.Operators
             return ((BinaryOperator)args.Op).Func(le, re);
         }
 
+        public static Expression TernaryOperatorFunc(OpFuncArgs args)
+        {
+            Expression falsy = args.ExprStack.Pop();
+            Expression truthy = args.ExprStack.Pop();
+            Expression condition = args.ExprStack.Pop();
+            // perform implicit conversion on known types ???
+            TypeConversion.Convert(ref falsy, ref truthy);
+            return ((TernaryOperator)args.Op).Func(condition, truthy, falsy);
+        }
 
+        public static Expression TernarySeparatorOperatorFunc(OpFuncArgs args)
+        {
+            return args.ExprStack.Pop();
+        }
 
     }
 }
