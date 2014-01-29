@@ -29,9 +29,9 @@ namespace ExpressionEvaluator
             TypeRegistry.Add(key, type);
         }
 
-        public Expression BuildTree()
+        public Expression BuildTree(Expression scopeParam = null)
         {
-            return Parser.BuildTree();
+            return Parser.BuildTree(scopeParam);
         }
 
         protected abstract void ClearCompiledMethod();

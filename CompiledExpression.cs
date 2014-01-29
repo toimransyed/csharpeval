@@ -22,8 +22,15 @@ namespace ExpressionEvaluator
 
         public Func<T> Compile()
         {
-            if (Expression == null) Expression = BuildTree(); 
+            if (Expression == null) Expression = BuildTree();
             return Expression.Lambda<Func<T>>(Expression).Compile();
+        }
+
+        public Func<dynamic, T> ScopeCompile()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam);
+            return Expression.Lambda<Func<dynamic, T>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
         }
 
         protected override void ClearCompiledMethod()
@@ -36,6 +43,15 @@ namespace ExpressionEvaluator
             if (_compiledMethod == null) _compiledMethod = Compile();
             return _compiledMethod();
         }
+
+        public object Global
+        {
+            set
+            {
+                Parser.Global = value;
+            }
+        }
+
     }
 
     public class CompiledExpression : ExpressionCompiler
@@ -46,11 +62,11 @@ namespace ExpressionEvaluator
         {
             Parser = new Parser();
             Parser.TypeRegistry = TypeRegistry;
+
         }
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression);
             Parser.TypeRegistry = TypeRegistry;
         }
 
@@ -58,6 +74,14 @@ namespace ExpressionEvaluator
         {
             if (Expression == null) Expression = BuildTree();
             return Expression.Lambda<Func<object>>(Expression.Convert(Expression, typeof(object))).Compile();
+        }
+
+
+        public Func<dynamic, object> ScopeCompile()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam);
+            return Expression.Lambda<Func<dynamic, object>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
         }
 
         protected override void ClearCompiledMethod()
@@ -71,5 +95,12 @@ namespace ExpressionEvaluator
             return _compiledMethod();
         }
 
+        public object Global
+        {
+            set
+            {
+                Parser.Global = value;
+            }
+        }
     }
 }
