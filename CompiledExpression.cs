@@ -26,6 +26,13 @@ namespace ExpressionEvaluator
             return Expression.Lambda<Func<T>>(Expression).Compile();
         }
 
+        public Func<dynamic, T> ScopeCompile()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam);
+            return Expression.Lambda<Func<dynamic, T>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+        }
+
         protected override void ClearCompiledMethod()
         {
             _compiledMethod = null;
@@ -70,6 +77,14 @@ namespace ExpressionEvaluator
             return Expression.Lambda<Func<object>>(Expression.Convert(Expression, typeof(object))).Compile();
         }
 
+
+        public Func<dynamic, object> ScopeCompile()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam);
+            return Expression.Lambda<Func<dynamic, object>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+        }
+
         protected override void ClearCompiledMethod()
         {
             _compiledMethod = null;
@@ -89,5 +104,12 @@ namespace ExpressionEvaluator
             }
         }
 
+        public object Global
+        {
+            set
+            {
+                Parser.Global = value;
+            }
+        }
     }
 }

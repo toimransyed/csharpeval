@@ -63,9 +63,7 @@ namespace ExpressionEvaluator
                     {"^", new BinaryOperator("^", 4, true, Expression.ExclusiveOr)},
                     {"|", new BinaryOperator("|", 3, true, Expression.Or)},
                     {"&&", new BinaryOperator("&&", 2, true, Expression.AndAlso)},
-                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse)},
-                    {":", new TernarySeparatorOperator(":", 2, false, OperatorCustomExpressions.TernarySeparator)},
-                    {"?", new TernaryOperator("?", 1, false, Expression.Condition)},
+                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse)}
                 };
 
             //operators.Add("^", new BinaryOperator("^", 11, false, Expression.Power));
@@ -370,7 +368,15 @@ namespace ExpressionEvaluator
                                 }
                                 else
                                 {
-                                    _tokenQueue.Enqueue(new Token() { Value = Global, IsType = true });
+                                    if (Global != null)
+                                    {
+                                        _tokenQueue.Enqueue(new Token() { Value = Global, IsType = true });
+                                    }
+                                    else
+                                    {
+                                        _tokenQueue.Enqueue(new Token() { IsScope = true });
+                                    }
+
                                     if (_opStack.Count > 0)
                                     {
                                         OpToken sc = _opStack.Peek();
@@ -579,7 +585,7 @@ namespace ExpressionEvaluator
         /// Builds the expression tree from the token queue
         /// </summary>
         /// <returns></returns>
-        public Expression BuildTree()
+        public Expression BuildTree(Expression scopeParam = null)
         {
             if (_tokenQueue.Count == 0) Parse();
 
@@ -616,19 +622,23 @@ namespace ExpressionEvaluator
                 {
                     exprStack.Push(Expression.Constant(t.Value));
                 }
+                else if (t.IsScope)
+                {
+                    exprStack.Push(scopeParam);
+                }
                 else if (t.IsOperator)
                 {
                     // handle operators
                     Expression result = null;
-                    IOperator op = _operators[(string)t.Value];
-                    Func<OpFuncArgs, Expression> opfunc = OpFuncServiceLocator.Resolve(op.GetType());
+                    var op = _operators[(string)t.Value];
+                    var opfunc = OpFuncServiceLocator.Resolve(op.GetType());
                     for (int i = 0; i < t.ArgCount; i++)
                     {
                         args.Add(exprStack.Pop());
                     }
                     // Arguments are in reverse order
                     args.Reverse();
-                    result = opfunc(new OpFuncArgs() { TempQueue = tempQueue, ExprStack = exprStack, T = t, Op = op, Args = args });
+                    result = opfunc(new OpFuncArgs() { TempQueue = tempQueue, ExprStack = exprStack, T = t, Op = op, Args = args, ScopeParam = scopeParam });
                     args.Clear();
                     exprStack.Push(result);
                 }

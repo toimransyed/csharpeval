@@ -17,10 +17,11 @@ namespace ExpressionEvaluator.Operators
         /// <param name="le">The expression that contains the member to be accessed</param>
         /// <param name="membername">The name of the member to access</param>
         /// <param name="args">Optional list of arguments to be passed if the member is a method</param>
+        /// <param name="scopeParam"></param>
         /// <returns></returns>
         public static Expression MemberAccess(Expression le, string membername, List<Expression> args)
         {
-            List<Type> argTypes = new List<Type>();
+            var argTypes = new List<Type>();
             args.ForEach(x => argTypes.Add(x.Type));
 
             Expression instance = null;
@@ -32,7 +33,7 @@ namespace ExpressionEvaluator.Operators
             else
             {
                 type = le.Type;
-                if (type.Name == "ExpandoObject")
+                if ((type.Name == "ExpandoObject" || type.Name == "Object"))
                 {
                     instance = le;
                 }
@@ -114,6 +115,8 @@ namespace ExpressionEvaluator.Operators
                     }
                 }
 
+                }
+
             }
         }
 
@@ -151,27 +154,6 @@ namespace ExpressionEvaluator.Operators
 
             return Expression.ArrayAccess(le, re);
         }
-
-
-        /// <summary>
-        /// Returns an Expression that access a 1-dimensional index on an Array expression 
-        /// </summary>
-        /// <param name="le"></param>
-        /// <param name="re"></param>
-        /// <returns></returns>
-        public static Expression TernarySeparator(Expression le)
-        {
-            //if (le.Type == typeof(string))
-            //{
-            //    MethodInfo mi = typeof(string).GetMethod("ToCharArray", new Type[] { });
-            //    le = Expression.Call(le, mi);
-            //}
-
-            return le;
-        }
-
-
-
 
     }
 }

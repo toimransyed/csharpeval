@@ -12,5 +12,6 @@ namespace ExpressionEvaluator.Operators
         public Token T;
         public IOperator Op;
         public List<Expression> Args;
+        public Expression ScopeParam;
     }
 }
