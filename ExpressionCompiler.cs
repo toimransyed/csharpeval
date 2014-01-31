@@ -29,14 +29,14 @@ namespace ExpressionEvaluator
             TypeRegistry.Add(key, type);
         }
 
-        public Expression BuildTree(Expression scopeParam = null)
+        protected Expression BuildTree(Expression scopeParam = null)
         {
             return Parser.BuildTree(scopeParam);
         }
 
         protected abstract void ClearCompiledMethod();
 
-        public void Parse()
+        protected void Parse()
         {
             Parser.Parse();
         }

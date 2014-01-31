@@ -56,5 +56,10 @@ namespace ExpressionEvaluator
             return (chr >= 'A' & chr <= 'Z') || (chr >= 'a' & chr <= 'z');
         }
 
+
+        internal static bool IsWhiteSpace(string str, int ptr)
+        {
+            return (str[ptr] == ' ' || str[ptr] == '\t');
+        }
     }
 }

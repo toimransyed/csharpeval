@@ -5,6 +5,7 @@ using System.Text;
 using System.Linq.Expressions;
 using ExpressionEvaluator.Operators;
 using ExpressionEvaluator.Tokens;
+using System.Reflection;
 
 namespace ExpressionEvaluator
 {
@@ -13,20 +14,27 @@ namespace ExpressionEvaluator
         string _pstr;
         int _ptr;
 
-        readonly Queue<Token> _tokenQueue = new Queue<Token>();
-        readonly Stack<OpToken> _opStack = new Stack<OpToken>();
-        OperatorCollection _operators;
-        private TypeRegistry _typeRegistry;
+        private readonly Queue<Token> _tokenQueue = new Queue<Token>();
+        private readonly Stack<OpToken> _opStack = new Stack<OpToken>();
+        private OperatorCollection _operators;
 
-        public TypeRegistry TypeRegistry
-        {
-            get { return _typeRegistry; }
-            set { _typeRegistry = value; }
-        }
+        public TypeRegistry TypeRegistry { get; set; }
 
         public object Global { get; set; }
 
-        public string StringToParse { get { return _pstr; } set { _pstr = value; _tokenQueue.Clear(); } }
+        public string StringToParse
+        {
+            get
+            {
+                return _pstr;
+            }
+            set
+            {
+                _pstr = value;
+                _tokenQueue.Clear();
+                _ptr = 0;
+            }
+        }
 
         public Parser()
         {
@@ -65,6 +73,7 @@ namespace ExpressionEvaluator
                     {"&&", new BinaryOperator("&&", 2, true, Expression.AndAlso)},
                     {"||", new BinaryOperator("||", 1, true, Expression.OrElse)},
                     {":", new TernarySeparatorOperator(":", 2, false, OperatorCustomExpressions.TernarySeparator)},
+                    {"=", new BinaryOperator("=", 1, false, Expression.Assign)},
                     {"?", new TernaryOperator("?", 1, false, Expression.Condition)}
                 };
 
@@ -93,7 +102,7 @@ namespace ExpressionEvaluator
         /// <summary>
         /// Parses the expression and builds the token queue for compiling
         /// </summary>
-        public void Parse()
+        public void Parse(bool isScope = false)
         {
             try
             {
@@ -262,7 +271,6 @@ namespace ExpressionEvaluator
                                 ntype = typeof(System.Int64);
                                 token = token.Remove(token.Length - 1, 1);
                             }
-                            var y = 10;
 
                             switch (ntype.Name)
                             {
@@ -279,44 +287,97 @@ namespace ExpressionEvaluator
                         // Parse numbers
                         else if (HelperMethods.IsANumber(_pstr, _ptr))
                         {
-
-
+                            bool isDecimal = false;
+                            int suffixStart = 0;
+                            int suffixLength = 0;
                             // Number identifiers start with a number and may contain numbers and decimals
-                            while (IsInBounds() && (HelperMethods.IsANumber(_pstr, _ptr) || _pstr[_ptr] == '.' || _pstr[_ptr] == 'd' || _pstr[_ptr] == 'f' || _pstr[_ptr] == 'L'))
+                            bool exit = false;
+
+                            while (IsInBounds() && !exit)
                             {
+                                if (_pstr[_ptr] == 'l' || _pstr[_ptr] == 'L' || _pstr[_ptr] == 'u' || _pstr[_ptr] == 'U')
+                                {
+                                    if (suffixLength == 0) suffixStart = _ptr;
+                                    if (suffixLength == 1) exit = true;
+                                    suffixLength++;
+                                }
+                                else if (_pstr[_ptr] == '.')
+                                {
+                                    if (isDecimal) break;
+                                    isDecimal = true;
+                                }
+                                else if (_pstr[_ptr] == 'd' || _pstr[_ptr] == 'D' || _pstr[_ptr] == 'f' || _pstr[_ptr] == 'F' || _pstr[_ptr] == 'm' || _pstr[_ptr] == 'M')
+                                {
+                                    suffixStart = _ptr;
+                                    suffixLength++;
+                                    exit = true;
+                                }
+                                else if (_pstr[_ptr] == 'l' || _pstr[_ptr] == 'L' || _pstr[_ptr] == 'u' || _pstr[_ptr] == 'U')
+                                {
+                                    if (isDecimal) throw new Exception("Expected end of decimal literal");
+                                    suffixStart = _ptr;
+                                    exit = true;
+                                }
+                                else if (!HelperMethods.IsANumber(_pstr, _ptr))
+                                {
+                                    break;
+                                }
                                 _ptr++;
                             }
 
                             string token = _pstr.Substring(lastptr, _ptr - lastptr);
+                            string suffix = "";
 
-                            Type ntype = typeof(System.Int32);
+                            Type ntype = null;
                             object val = null;
 
-                            if (token.Contains('.')) ntype = typeof(System.Double);
-                            if (token.EndsWith("d") || token.EndsWith("f") || token.EndsWith("L"))
+                            if (suffixLength > 0)
                             {
-                                if (token.EndsWith("d")) ntype = typeof(System.Double);
-                                if (token.EndsWith("f")) ntype = typeof(System.Single);
-                                if (token.EndsWith("L")) ntype = typeof(System.Int64);
-                                token = token.Remove(token.Length - 1, 1);
+                                suffix = token.Substring(token.Length - suffixLength);
+                                token = token.Substring(0, token.Length - suffixLength);
+
+                                switch (suffix.ToLower())
+                                {
+                                    case "d":
+                                        ntype = typeof(Double);
+                                        val = double.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                    case "f":
+                                        ntype = typeof(Single);
+                                        val = float.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                    case "m":
+                                        ntype = typeof(Decimal);
+                                        val = decimal.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                    case "l":
+                                        ntype = typeof(Int64);
+                                        val = long.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                    case "u":
+                                        ntype = typeof(UInt32);
+                                        val = uint.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                    case "ul":
+                                    case "lu":
+                                        ntype = typeof(UInt64);
+                                        val = ulong.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                        break;
+                                }
+
                             }
-
-                            var x = 2L;
-
-                            switch (ntype.Name)
+                            else
                             {
-                                case "Int32":
-                                    val = int.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
-                                    break;
-                                case "Int64":
-                                    val = long.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
-                                    break;
-                                case "Double":
+                                if (isDecimal)
+                                {
+                                    ntype = typeof(Double);
                                     val = double.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
-                                    break;
-                                case "Single":
-                                    val = float.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
-                                    break;
+                                }
+                                else
+                                {
+                                    ntype = typeof(Int32);
+                                    val = int.Parse(token, System.Globalization.CultureInfo.InvariantCulture);
+                                }
                             }
 
 
@@ -347,15 +408,15 @@ namespace ExpressionEvaluator
                             {
                                 mToken.Name = token;
                             }
-                            else if (_typeRegistry.ContainsKey(token))
+                            else if (TypeRegistry.ContainsKey(token))
                             {
-                                if (_typeRegistry[token].GetType().Name == "RuntimeType")
+                                if (TypeRegistry[token].GetType().Name == "RuntimeType")
                                 {
-                                    _tokenQueue.Enqueue(new Token() { Value = ((Type)_typeRegistry[token]).UnderlyingSystemType, IsType = true });
+                                    _tokenQueue.Enqueue(new Token() { Value = ((Type)TypeRegistry[token]).UnderlyingSystemType, IsType = true });
                                 }
                                 else
                                 {
-                                    _tokenQueue.Enqueue(new Token() { Value = _typeRegistry[token], IsType = true });
+                                    _tokenQueue.Enqueue(new Token() { Value = TypeRegistry[token], IsType = true });
                                 }
                             }
                             else
@@ -376,7 +437,14 @@ namespace ExpressionEvaluator
                                     }
                                     else
                                     {
-                                        _tokenQueue.Enqueue(new Token() { IsScope = true });
+                                        if (isScope)
+                                        {
+                                            _tokenQueue.Enqueue(new Token() { IsScope = true });
+                                        }
+                                        else
+                                        {
+                                            throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
+                                        }
                                     }
 
                                     if (_opStack.Count > 0)
@@ -392,7 +460,6 @@ namespace ExpressionEvaluator
 
                                     _opStack.Push(new MemberToken());
                                     _ptr -= token.Length;
-                                    //throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
                                 }
                             }
                         }
@@ -456,9 +523,9 @@ namespace ExpressionEvaluator
                             }
                             string typeName = _pstr.Substring(lastptr + 1, curptr - lastptr - 1).Trim();
                             Type t;
-                            if (_typeRegistry.ContainsKey(typeName))
+                            if (TypeRegistry.ContainsKey(typeName))
                             {
-                                _tokenQueue.Enqueue(new Token() { Value = "(" + typeName + ")", IsCast = true, Type = (Type)_typeRegistry[typeName] });
+                                _tokenQueue.Enqueue(new Token() { Value = "(" + typeName + ")", IsCast = true, Type = (Type)TypeRegistry[typeName] });
                                 _ptr = curptr + 1;
                             }
                             else if ((t = Type.GetType(typeName)) != null)
@@ -589,7 +656,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Expression BuildTree(Expression scopeParam = null)
         {
-            if (_tokenQueue.Count == 0) Parse();
+            if (_tokenQueue.Count == 0) Parse(scopeParam != null);
 
             // make a copy of the queue, so that we don't empty the original queue
             Queue<Token> tempQueue = new Queue<Token>(_tokenQueue);
@@ -626,6 +693,10 @@ namespace ExpressionEvaluator
                 }
                 else if (t.IsScope)
                 {
+                    if (scopeParam == null)
+                    {
+                        throw new Exception(string.Format("Unexpected identifier {0} or scope empty", t.Value));
+                    }
                     exprStack.Push(scopeParam);
                 }
                 else if (t.IsOperator)
