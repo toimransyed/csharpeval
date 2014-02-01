@@ -41,12 +41,14 @@ namespace ExpressionEvaluator
         {
             _typePrecedence = new Dictionary<Type, int>
                 {
-                    {typeof (byte), 0},
-                    {typeof (int), 1},
-                    {typeof (short), 2},
-                    {typeof (long), 3},
-                    {typeof (float), 4},
-                    {typeof (double), 5}
+                    {typeof (object), 0},
+                    {typeof (bool), 1},
+                    {typeof (byte), 2},
+                    {typeof (int), 3},
+                    {typeof (short), 4},
+                    {typeof (long), 5},
+                    {typeof (float), 6},
+                    {typeof (double), 7}
                 };
         }
     }

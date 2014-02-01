@@ -13,5 +13,6 @@ namespace ExpressionEvaluator.Tokens
         public int Ptr;
         public bool IsCast;
         public bool IsScope;
+        public bool IsFunction;
     }
 }

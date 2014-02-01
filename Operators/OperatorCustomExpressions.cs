@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace ExpressionEvaluator.Operators
 {
@@ -19,13 +20,14 @@ namespace ExpressionEvaluator.Operators
         /// <param name="args">Optional list of arguments to be passed if the member is a method</param>
         /// <param name="scopeParam"></param>
         /// <returns></returns>
-        public static Expression MemberAccess(Expression le, string membername, List<Expression> args)
+        public static Expression MemberAccess(bool isFunction, Expression le, string membername, List<Expression> args)
         {
-            var argTypes = new List<Type>();
-            args.ForEach(x => argTypes.Add(x.Type));
+            IEnumerable<Type> argTypes = args.Select(x => x.Type);
 
             Expression instance = null;
             Type type = null;
+            bool isDynamic = false;
+
             if (le.Type.Name == "RuntimeType")
             {
                 type = ((Type)((ConstantExpression)le).Value);
@@ -33,57 +35,54 @@ namespace ExpressionEvaluator.Operators
             else
             {
                 type = le.Type;
-                if ((type.Name == "ExpandoObject" || type.Name == "Object"))
+                instance = le;
+                isDynamic = type.Name == "ExpandoObject" || type.Name == "Object";
+            }
+
+            if (isFunction)
+            {
+                if (isDynamic)
                 {
-                    instance = le;
+                    var expArgs = new List<Expression> { instance };
+                    expArgs.AddRange(args);
+                    var binderM = Microsoft.CSharp.RuntimeBinder.Binder.InvokeMember(CSharpBinderFlags.None, membername,
+                                                                                     null, type,
+                                                                                     expArgs.Select(
+                                                                                         x =>
+                                                                                         CSharpArgumentInfo.Create(
+                                                                                             CSharpArgumentInfoFlags
+                                                                                                 .None, null))
+                        );
+                    return Expression.Dynamic(binderM, typeof(object), expArgs);
                 }
                 else
                 {
-                    instance = le;
+                    MethodInfo mi = type.GetMethod(membername, argTypes.ToArray());
+                    if (mi != null)
+                    {
+                        ParameterInfo[] pi = mi.GetParameters();
+                        for (int i = 0; i < pi.Length; i++)
+                        {
+                            args[i] = TypeConversion.Convert(args[i], pi[i].ParameterType);
+                        }
+                        return Expression.Call(instance, mi, args);
+                    }
                 }
-            }
 
-            MethodInfo mi = type.GetMethod(membername, argTypes.ToArray());
-            if (mi != null)
-            {
-                ParameterInfo[] pi = mi.GetParameters();
-                for (int i = 0; i < pi.Length; i++)
-                {
-                    args[i] = TypeConversion.Convert(args[i], pi[i].ParameterType);
-                }
-                return Expression.Call(instance, mi, args);
             }
             else
             {
-                Expression exp = null;
-
-                if (type.Name == "ExpandoObject" || type.Name == "Object")
+                if (isDynamic)
                 {
-                    if (args.Count > 0)
-                    {
-                        var expArgs = new List<Expression> { instance };
-                        expArgs.AddRange(args);
-                        var binderM = Microsoft.CSharp.RuntimeBinder.Binder.InvokeMember(CSharpBinderFlags.None, membername,
-                                                                 null, type,
-                                                                 expArgs.Select(x => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
-                            //new[] { 
-                            //    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                            //    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                            //}
-                    );
-                        return Expression.Dynamic(binderM, typeof(object), expArgs);
+                    var binder = Microsoft.CSharp.RuntimeBinder.Binder.GetMember(CSharpBinderFlags.None, membername,
+                                                         type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
 
-                    }
-                    else
-                    {
-                        var binder = Microsoft.CSharp.RuntimeBinder.Binder.GetMember(CSharpBinderFlags.None, membername,
-                                                                                     type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
-                        return Expression.Dynamic(binder, typeof(object), instance);
-                    }
-
+                    return Expression.Dynamic(binder, typeof(object), instance);
                 }
                 else
                 {
+                    Expression exp = null;
+
                     PropertyInfo pi = type.GetProperty(membername);
                     if (pi != null)
                     {
@@ -109,15 +108,13 @@ namespace ExpressionEvaluator.Operators
                             return exp;
                         }
                     }
-                    else
-                    {
-                        throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
-                    }
                 }
 
-            }
 
+            }
+            throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
         }
+
 
 
         /// <summary>
@@ -128,9 +125,9 @@ namespace ExpressionEvaluator.Operators
         /// <returns></returns>
         public static Expression Add(Expression le, Expression re)
         {
-            if (le.Type == typeof(string) && re.Type == typeof(string))
+            if (le.Type == typeof(string) || re.Type == typeof(string))
             {
-                return Expression.Add(le, re, typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }));
+                return Expression.Add(le, re, typeof(string).GetMethod("Concat", new Type[] {le.Type, re.Type }));
             }
             else
             {

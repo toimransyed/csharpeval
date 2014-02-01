@@ -7,5 +7,6 @@ namespace ExpressionEvaluator.Tokens
             IsOperator = true;
             ArgCount = 0;
         }
+
     }
 }

@@ -53,27 +53,27 @@ namespace ExpressionEvaluator
             _operators = new OperatorCollection
                 {
                     {".", new MethodOperator(".", 12, true, OperatorCustomExpressions.MemberAccess)},
-                    {"!", new UnaryOperator("!", 11, false, Expression.Not)},
-                    {"*", new BinaryOperator("*", 10, true, Expression.Multiply)},
-                    {"/", new BinaryOperator("/", 10, true, Expression.Divide)},
-                    {"%", new BinaryOperator("%", 10, true, Expression.Modulo)},
-                    {"+", new BinaryOperator("+", 9, true, OperatorCustomExpressions.Add)},
-                    {"-", new BinaryOperator("-", 9, true, Expression.Subtract)},
-                    {"<<", new BinaryOperator("<<", 8, true, Expression.LeftShift)},
-                    {">>", new BinaryOperator(">>", 8, true, Expression.RightShift)},
-                    {"<", new BinaryOperator("<", 7, true, Expression.LessThan)},
-                    {">", new BinaryOperator(">", 7, true, Expression.GreaterThan)},
-                    {"<=", new BinaryOperator("<=", 7, true, Expression.LessThanOrEqual)},
-                    {">=", new BinaryOperator(">=", 7, true, Expression.GreaterThanOrEqual)},
-                    {"==", new BinaryOperator("==", 6, true, Expression.Equal)},
-                    {"!=", new BinaryOperator("!=", 6, true, Expression.NotEqual)},
-                    {"&", new BinaryOperator("&", 5, true, Expression.And)},
-                    {"^", new BinaryOperator("^", 4, true, Expression.ExclusiveOr)},
-                    {"|", new BinaryOperator("|", 3, true, Expression.Or)},
-                    {"&&", new BinaryOperator("&&", 2, true, Expression.AndAlso)},
-                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse)},
+                    {"!", new UnaryOperator("!", 11, false, Expression.Not, ExpressionType.Not)},
+                    {"*", new BinaryOperator("*", 10, true, Expression.Multiply, ExpressionType.Multiply)},
+                    {"/", new BinaryOperator("/", 10, true, Expression.Divide, ExpressionType.Divide)},
+                    {"%", new BinaryOperator("%", 10, true, Expression.Modulo, ExpressionType.Modulo)},
+                    {"+", new BinaryOperator("+", 9, true, OperatorCustomExpressions.Add, ExpressionType.Add)},
+                    {"-", new BinaryOperator("-", 9, true, Expression.Subtract, ExpressionType.Subtract)},
+                    {"<<", new BinaryOperator("<<", 8, true, Expression.LeftShift, ExpressionType.LeftShift)},
+                    {">>", new BinaryOperator(">>", 8, true, Expression.RightShift, ExpressionType.RightShift)},
+                    {"<", new BinaryOperator("<", 7, true, Expression.LessThan, ExpressionType.LessThan)},
+                    {">", new BinaryOperator(">", 7, true, Expression.GreaterThan, ExpressionType.GreaterThan)},
+                    {"<=", new BinaryOperator("<=", 7, true, Expression.LessThanOrEqual, ExpressionType.LessThanOrEqual)},
+                    {">=", new BinaryOperator(">=", 7, true, Expression.GreaterThanOrEqual, ExpressionType.GreaterThanOrEqual)},
+                    {"==", new BinaryOperator("==", 6, true, Expression.Equal, ExpressionType.Equal)},
+                    {"!=", new BinaryOperator("!=", 6, true, Expression.NotEqual, ExpressionType.NotEqual)},
+                    {"&", new BinaryOperator("&", 5, true, Expression.And, ExpressionType.And)},
+                    {"^", new BinaryOperator("^", 4, true, Expression.ExclusiveOr, ExpressionType.ExclusiveOr)},
+                    {"|", new BinaryOperator("|", 3, true, Expression.Or, ExpressionType.Or)},
+                    {"&&", new BinaryOperator("&&", 2, true, Expression.AndAlso, ExpressionType.AndAlso)},
+                    {"||", new BinaryOperator("||", 1, true, Expression.OrElse, ExpressionType.OrElse)},
                     {":", new TernarySeparatorOperator(":", 2, false, OperatorCustomExpressions.TernarySeparator)},
-                    {"=", new BinaryOperator("=", 1, false, Expression.Assign)},
+                    {"=", new BinaryOperator("=", 1, false, Expression.Assign, ExpressionType.Assign)},
                     {"?", new TernaryOperator("?", 1, false, Expression.Condition)}
                 };
 
@@ -591,6 +591,7 @@ namespace ExpressionEvaluator
                                 if ((string)popToken.Value == ".")
                                 {
                                     popToken = _opStack.Pop();
+                                    popToken.IsFunction = true;
                                     _tokenQueue.Enqueue(popToken);
                                 }
                             }

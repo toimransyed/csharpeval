@@ -70,11 +70,12 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
-        public void Variables()
+        public void UnderscoreVariables()
         {
-            var str = "1 | VARIABLE_NAME";
+            var str = "1 | VARIABLE_NAME | _VARNAME";
             var c = new CompiledExpression(str);
             c.RegisterType("VARIABLE_NAME", 16);
+            c.RegisterType("_VARNAME", 32);
             var ret = c.Eval();
         }
 
