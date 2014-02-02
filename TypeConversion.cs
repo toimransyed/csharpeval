@@ -37,6 +37,29 @@ namespace ExpressionEvaluator
             return le;
         }
 
+        /// <summary>
+        /// Compares two types for implicit conversion
+        /// </summary>
+        /// <param name="from">The source type</param>
+        /// <param name="to">The destination type</param>
+        /// <returns>-1 if conversion is not possible, 0 if no conversion necessary, +1 if conversion possible</returns>
+        internal static int CanConvert(Type from, Type to)
+        {
+            if (Instance._typePrecedence.ContainsKey(from) && Instance._typePrecedence.ContainsKey(to))
+            {
+                if (Instance._typePrecedence[from] > Instance._typePrecedence[to]) return -1;
+                if (Instance._typePrecedence[from] == Instance._typePrecedence[to]) return 0;
+                if (Instance._typePrecedence[from] < Instance._typePrecedence[to]) return 1;
+            }
+            else
+            {
+                if (from == to) return 0;
+                if (to.IsAssignableFrom(from)) return 1;
+            }
+            return -1;
+        }
+
+
         TypeConversion()
         {
             _typePrecedence = new Dictionary<Type, int>

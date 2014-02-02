@@ -17,7 +17,6 @@ namespace ExpressionEvaluator
         private readonly Queue<Token> _tokenQueue = new Queue<Token>();
         private readonly Stack<OpToken> _opStack = new Stack<OpToken>();
         private OperatorCollection _operators;
-
         public TypeRegistry TypeRegistry { get; set; }
 
         public object Global { get; set; }
@@ -190,10 +189,10 @@ namespace ExpressionEvaluator
                             _ptr++;
 
                         }
+                        // ArgSeparator
                         else if (_pstr[_ptr] == ',')
                         {
                             bool pe = false;
-
 
                             while (_opStack.Count > 0)
                             {
@@ -288,17 +287,20 @@ namespace ExpressionEvaluator
                         else if (HelperMethods.IsANumber(_pstr, _ptr))
                         {
                             bool isDecimal = false;
-                            int suffixStart = 0;
                             int suffixLength = 0;
-                            // Number identifiers start with a number and may contain numbers and decimals
-                            bool exit = false;
 
-                            while (IsInBounds() && !exit)
+                            // Number identifiers start with a number and may contain numbers and decimals
+                            while (IsInBounds())
                             {
                                 if (_pstr[_ptr] == 'l' || _pstr[_ptr] == 'L' || _pstr[_ptr] == 'u' || _pstr[_ptr] == 'U')
                                 {
-                                    if (suffixLength == 0) suffixStart = _ptr;
-                                    if (suffixLength == 1) exit = true;
+                                    if (isDecimal) throw new Exception("Expected end of decimal literal");
+                                    //if (suffixLength == 0) suffixStart = _ptr;
+                                    if (suffixLength == 1)
+                                    {
+                                        _ptr++;
+                                        break;
+                                    }
                                     suffixLength++;
                                 }
                                 else if (_pstr[_ptr] == '.')
@@ -308,15 +310,9 @@ namespace ExpressionEvaluator
                                 }
                                 else if (_pstr[_ptr] == 'd' || _pstr[_ptr] == 'D' || _pstr[_ptr] == 'f' || _pstr[_ptr] == 'F' || _pstr[_ptr] == 'm' || _pstr[_ptr] == 'M')
                                 {
-                                    suffixStart = _ptr;
                                     suffixLength++;
-                                    exit = true;
-                                }
-                                else if (_pstr[_ptr] == 'l' || _pstr[_ptr] == 'L' || _pstr[_ptr] == 'u' || _pstr[_ptr] == 'U')
-                                {
-                                    if (isDecimal) throw new Exception("Expected end of decimal literal");
-                                    suffixStart = _ptr;
-                                    exit = true;
+                                    _ptr++;
+                                    break;
                                 }
                                 else if (!HelperMethods.IsANumber(_pstr, _ptr))
                                 {
@@ -393,8 +389,9 @@ namespace ExpressionEvaluator
                                 _ptr++;
                             }
 
-
                             string token = _pstr.Substring(lastptr, _ptr - lastptr);
+
+
                             MemberToken mToken = null;
 
                             if (_opStack.Count > 0)
@@ -421,11 +418,11 @@ namespace ExpressionEvaluator
                             }
                             else
                             {
-                                if ((token.ToLower() == "null"))
+                                if ((token == "null"))
                                 {
                                     _tokenQueue.Enqueue(new Token() { Value = null, IsIdent = true, Type = typeof(object) });
                                 }
-                                else if ((token.ToLower() == "true") || (token.ToLower() == "false"))
+                                else if ((token == "true") || (token == "false"))
                                 {
                                     _tokenQueue.Enqueue(new Token() { Value = Boolean.Parse(token), IsIdent = true, Type = typeof(Boolean) });
                                 }
@@ -443,6 +440,7 @@ namespace ExpressionEvaluator
                                         }
                                         else
                                         {
+                                            //_tokenQueue.Enqueue(new Token() { IsIdent = true, Value = token });
                                             throw new Exception(string.Format("Unknown type or identifier '{0}'", token));
                                         }
                                     }
@@ -517,26 +515,50 @@ namespace ExpressionEvaluator
                         else if (_pstr[_ptr] == '(')
                         {
                             int curptr = _ptr;
-                            while (_pstr[curptr] != ')')
+                            int depth = 0;
+                            var containsComma = false;
+
+                            while (IsInBounds())
                             {
-                                curptr++;
-                            }
-                            string typeName = _pstr.Substring(lastptr + 1, curptr - lastptr - 1).Trim();
-                            Type t;
-                            if (TypeRegistry.ContainsKey(typeName))
-                            {
-                                _tokenQueue.Enqueue(new Token() { Value = "(" + typeName + ")", IsCast = true, Type = (Type)TypeRegistry[typeName] });
-                                _ptr = curptr + 1;
-                            }
-                            else if ((t = Type.GetType(typeName)) != null)
-                            {
-                                _tokenQueue.Enqueue(new Token() { Value = "(" + t.Name + ")", IsCast = true, Type = t });
-                                _ptr = curptr + 1;
-                            }
-                            else
-                            {
-                                _opStack.Push(new OpToken() { Value = "(", Ptr = _ptr + 1 });
+                                if (_pstr[_ptr] == '(') depth++;
+                                if (_pstr[_ptr] == ')') depth--;
+                                if (_pstr[_ptr] == ',') containsComma = true; 
                                 _ptr++;
+                                if (depth == 0) break;
+                            }
+
+                            _ptr--;
+                            
+                            if (depth != 0)
+                                throw new Exception("Parenthesis mismatch");
+
+                            string token = _pstr.Substring(lastptr + 1, _ptr - lastptr - 1).Trim();
+
+                            Type t;
+
+                            bool isCast = false;
+
+                            if (!containsComma)
+                            {
+                                if (TypeRegistry.ContainsKey(token))
+                                {
+                                    _tokenQueue.Enqueue(new Token() { Value = "(" + token + ")", IsCast = true, Type = (Type)TypeRegistry[token] });
+                                    //_ptr = curptr + 1;
+                                    isCast = true;
+                                }
+                                else if ((t = Type.GetType(token)) != null)
+                                {
+                                    _tokenQueue.Enqueue(new Token() { Value = "(" + t.Name + ")", IsCast = true, Type = t });
+                                    // _ptr = curptr + 1;
+                                    isCast = true;
+                                }
+                            }
+
+                            if (!isCast)
+                            {
+                                _opStack.Push(new OpToken() { Value = "(", Ptr = curptr + 1 });
+                                
+                                _ptr = curptr + 1;
                             }
 
                         }
@@ -597,6 +619,11 @@ namespace ExpressionEvaluator
                             }
                             _ptr++;
                         }
+                        //else if (_pstr[_ptr] == '=' && _pstr[_ptr + 1] == '>')
+                        //{
+                        //    _ptr++;
+                        //    _ptr++;
+                        //}
                         else if ((op = _operators.IsOperator(_pstr, ref _ptr)) != null)
                         {
                             while (_opStack.Count > 0)
@@ -604,9 +631,9 @@ namespace ExpressionEvaluator
                                 OpToken sc = _opStack.Peek();
 
                                 if (_operators.IsOperator((string)sc.Value) &&
-                                     ((_operators[op].LeftAssoc &&
-                                       (_operators[op].Precedence <= _operators[(string)sc.Value].Precedence)) ||
-                                       (_operators[op].Precedence < _operators[(string)sc.Value].Precedence))
+                                    ((_operators[op].LeftAssoc &&
+                                      (_operators[op].Precedence <= _operators[(string)sc.Value].Precedence)) ||
+                                     (_operators[op].Precedence < _operators[(string)sc.Value].Precedence))
                                     )
                                 {
                                     OpToken popToken = _opStack.Pop();
@@ -660,10 +687,10 @@ namespace ExpressionEvaluator
             if (_tokenQueue.Count == 0) Parse(scopeParam != null);
 
             // make a copy of the queue, so that we don't empty the original queue
-            Queue<Token> tempQueue = new Queue<Token>(_tokenQueue);
-            Stack<Expression> exprStack = new Stack<Expression>();
-            List<Expression> args = new List<Expression>();
-            Stack<String> literalStack = new Stack<String>();
+            var tempQueue = new Queue<Token>(_tokenQueue);
+            var exprStack = new Stack<Expression>();
+            var args = new List<Expression>();
+            var literalStack = new Stack<String>();
 
 #if DEBUG
             var q = tempQueue.Select(x => (x.Value ?? "<null>").ToString() + (x.GetType() == typeof(MemberToken) ? ":" + ((MemberToken)x).Name : ""));
