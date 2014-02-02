@@ -58,6 +58,8 @@ namespace ExpressionEvaluator.Operators
                 }
                 else
                 {
+                    // TODO: Test overloaded methods with different types
+
                     var methodInfo = type.GetMethod(membername, argTypes.ToArray());
 
                     if (methodInfo != null)

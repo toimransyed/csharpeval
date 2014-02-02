@@ -10,6 +10,25 @@ namespace Tests
 {
     public class c
     {
+        public double sum(double i, double t)
+        {
+            var result = 0d;
+            return result;
+        }
+
+        public double sum(double i, int t)
+        {
+            var result = 0d;
+            return result;
+        }
+
+        public int sum(int i1, int i2, int i3, int i4, int i5)
+        {
+            var result = 0;
+            return result;
+        }
+
+
         public double sum(double i, params double[] nums)
         {
             var result = 0d;
@@ -20,15 +39,15 @@ namespace Tests
             return result;
         }
 
-        //public int sum(int i, params int[] nums)
-        //{
-        //    var result = 0;
-        //    foreach (var num in nums)
-        //    {
-        //        result += num;
-        //    }
-        //    return result;
-        //}
+        public float sum(float i, params float[] nums)
+        {
+            var result = 0f;
+            foreach (var num in nums)
+            {
+                result += num;
+            }
+            return result;
+        }
 
         
         public int yes()
@@ -88,7 +107,7 @@ namespace Tests
 
         static void Main(string[] args)
         {
-            var c = new CompiledExpression("sum(1,2,3,4,5)");
+            var c = new CompiledExpression("sum(1,2)");
 
             dynamic scope = new ExpandoObject();
             scope.x = 2;
@@ -97,7 +116,7 @@ namespace Tests
             var q = new c();
             var qq = new c2();
 
-            var x = q.sum(1, 2, 3, 4, 5);
+            var x = q.sum(1, 2, 3);
 
             scope.b = q;
 

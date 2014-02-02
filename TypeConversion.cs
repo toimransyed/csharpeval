@@ -47,9 +47,7 @@ namespace ExpressionEvaluator
         {
             if (Instance._typePrecedence.ContainsKey(from) && Instance._typePrecedence.ContainsKey(to))
             {
-                if (Instance._typePrecedence[from] > Instance._typePrecedence[to]) return -1;
-                if (Instance._typePrecedence[from] == Instance._typePrecedence[to]) return 0;
-                if (Instance._typePrecedence[from] < Instance._typePrecedence[to]) return 1;
+                return Instance._typePrecedence[to] - Instance._typePrecedence[from];
             }
             else
             {
