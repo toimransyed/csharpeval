@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections;
+using System.Dynamic;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ExpressionEvaluator;
+using UnitTestProject1;
 
 namespace ExpressionEvaluator.Tests
 {
@@ -169,8 +172,6 @@ namespace ExpressionEvaluator.Tests
             Assert.IsTrue(Convert.ToInt64(ret) == 2L);
         }
 
-
-
         [TestMethod]
         public void AddImplicitIntegersReturnsInteger()
         {
@@ -199,5 +200,48 @@ namespace ExpressionEvaluator.Tests
             Assert.IsTrue(Convert.ToInt32(ret) == 0);
         }
 
+        [TestMethod]
+        public void NameValueTest()
+        {
+            //
+            // Expando Objects
+            //
+            dynamic myObj = new ExpandoObject();
+            myObj.User = "testUser";
+
+            CompiledExpression compiler = new CompiledExpression();
+            compiler.RegisterType("myObj", myObj);
+            compiler.StringToParse = "myObj.User";
+            compiler.Compile();
+            var result = compiler.Eval();
+
+            Assert.AreEqual(result, "testUser"); //test pass
+
+            //
+            // Dynamic Objects
+            //
+            IList testList = new ArrayList();
+            testList.Add(new NameValue<string>() { Name = "User", Value = "testUserdynamic" });
+            testList.Add(new NameValue<string>() { Name = "Password", Value = "myPass" });
+            dynamic dynamicList = new PropertyExtensibleObject(testList);
+
+            Assert.AreEqual(dynamicList.User, "testUserdynamic"); //test pass 
+
+            compiler = new CompiledExpression();
+            compiler.RegisterType("dynamicList", dynamicList);
+            compiler.StringToParse = "dynamicList.User";
+            compiler.Compile();   //!!!!!!FAILS here with this message : Member not found: PropertyExtensibleObject.User
+            result = compiler.Eval();
+
+            Assert.AreEqual(result, "testUserdynamic");
+
+        }
+
+    }
+
+    public class NameValue<T>
+    {
+        public string Name { get; set; }
+        public T Value { get; set; }
     }
 }

@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq.Expressions;
 using ExpressionEvaluator.Tokens;
 using Microsoft.CSharp.RuntimeBinder;
+using System.Linq;
 
 namespace ExpressionEvaluator.Operators
 {
@@ -33,7 +36,8 @@ namespace ExpressionEvaluator.Operators
         {
             Expression le = args.ExprStack.Pop();
             // perform implicit conversion on known types
-            if ((le.Type.Name == "Object" || le.Type.Name == "ExpandoObject"))
+
+            if (le.Type.IsDynamic())
             {
                 return DynamicUnaryOperatorFunc(le, args.Op.ExpressionType);
             }
@@ -50,8 +54,11 @@ namespace ExpressionEvaluator.Operators
             Expression re = args.ExprStack.Pop();
             Expression le = args.ExprStack.Pop();
             // perform implicit conversion on known types
-            if ((le.Type.Name == "Object" || le.Type.Name == "ExpandoObject") &&
-                (re.Type.Name == "Object" || re.Type.Name == "ExpandoObject"))
+            var isDynamic = le.Type.GetInterfaces().Contains(typeof(IDynamicMetaObjectProvider)) ||
+                le.Type == typeof(Object);
+
+
+            if (le.Type.IsDynamic() && re.Type.IsDynamic())
             {
                 return DynamicBinaryOperatorFunc(le, re, args.Op.ExpressionType);
             }

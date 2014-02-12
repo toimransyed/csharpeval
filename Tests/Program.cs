@@ -22,6 +22,12 @@ namespace Tests
             return result;
         }
 
+        public int sum(int i, int t)
+        {
+            var result = 0;
+            return result;
+        }
+
         public int sum(int i1, int i2, int i3, int i4, int i5)
         {
             var result = 0;
@@ -116,7 +122,7 @@ namespace Tests
             var q = new c();
             var qq = new c2();
 
-            var x = q.sum(1, 2, 3);
+            var x = q.sum(1f, 2f);
 
             scope.b = q;
 

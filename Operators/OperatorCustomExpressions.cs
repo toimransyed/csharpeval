@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -35,7 +36,7 @@ namespace ExpressionEvaluator.Operators
             {
                 type = le.Type;
                 instance = le;
-                isDynamic = type.Name == "ExpandoObject" || type.Name == "Object";
+                isDynamic = type.IsDynamic();
             }
 
             if (isFunction)
@@ -60,6 +61,7 @@ namespace ExpressionEvaluator.Operators
                 {
                     // TODO: Test overloaded methods with different types
 
+                    // Look for an exact match
                     var methodInfo = type.GetMethod(membername, argTypes.ToArray());
 
                     if (methodInfo != null)
@@ -72,7 +74,7 @@ namespace ExpressionEvaluator.Operators
                         }
 
                         return Expression.Call(instance, methodInfo, args);
-                    }
+                    }   
 
                     // assume params
 
