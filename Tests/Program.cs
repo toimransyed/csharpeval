@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -113,7 +114,18 @@ namespace Tests
 
         static void Main(string[] args)
         {
-            var c = new CompiledExpression("sum(1,2)");
+            var c = new CompiledExpression();
+            c.StringToParse = "'1000.00'.Replace('.', '')";
+            var e = c.Eval(); // returns 100000
+
+            c.StringToParse = "'1,000.00'.Replace(',', '.')";
+            e = c.Eval(); // returns 1.000.00
+
+            c.RegisterDefaultTypes();
+            c.RegisterType("CultureInfo", typeof(CultureInfo));
+
+            c.StringToParse = "DateTime.ParseExact('02/11/2014 09:14', 'M/d/yyyy hh:mm', CultureInfo.InvariantCulture).ToString('dd/MM/yyyy HH:MM:SS')";
+            e = c.Eval(); // returns  11/02/2014 09:02:SS
 
             dynamic scope = new ExpandoObject();
             scope.x = 2;
