@@ -74,7 +74,7 @@ namespace ExpressionEvaluator.Operators
                         }
 
                         return Expression.Call(instance, methodInfo, args);
-                    }   
+                    }
 
                     // assume params
 
@@ -142,7 +142,27 @@ namespace ExpressionEvaluator.Operators
                         new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
                         );
 
-                    return Expression.Dynamic(binder, typeof(object), instance);
+                    var result = Expression.Dynamic(binder, typeof(object), instance);
+
+
+                    if (args.Count > 0)
+                    {
+                        var expArgs = new List<Expression>() { result };
+
+                        expArgs.AddRange(args);
+
+                        var indexedBinder = Binder.GetIndex(
+                            CSharpBinderFlags.None,
+                            type,
+                            expArgs.Select(x => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                            );
+
+                        result =
+                            Expression.Dynamic(indexedBinder, typeof(object), expArgs);
+
+                    }
+
+                    return result;
                 }
                 else
                 {

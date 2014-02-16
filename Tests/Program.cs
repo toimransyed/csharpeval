@@ -56,7 +56,7 @@ namespace Tests
             return result;
         }
 
-        
+
         public int yes()
         {
             return 1234;
@@ -114,42 +114,17 @@ namespace Tests
 
         static void Main(string[] args)
         {
-            var c = new CompiledExpression();
-            c.StringToParse = "'1000.00'.Replace('.', '')";
-            var e = c.Eval(); // returns 100000
-
-            c.StringToParse = "'1,000.00'.Replace(',', '.')";
-            e = c.Eval(); // returns 1.000.00
-
-            c.RegisterDefaultTypes();
-            c.RegisterType("CultureInfo", typeof(CultureInfo));
-
-            c.StringToParse = "DateTime.ParseExact('02/11/2014 09:14', 'M/d/yyyy hh:mm', CultureInfo.InvariantCulture).ToString('dd/MM/yyyy HH:MM:SS')";
-            e = c.Eval(); // returns  11/02/2014 09:02:SS
-
+            var x = new List<String>() { "Hello", "There", "World" };
             dynamic scope = new ExpandoObject();
-            scope.x = 2;
-            scope.y = 3;
+            scope.x = x;
+            var p = scope.x[0];
 
-            var q = new c();
-            var qq = new c2();
 
-            var x = q.sum(1f, 2f);
+            var c = new CompiledExpression() { StringToParse = "x[0] + ', ' + x[2]" };
+            var f = c.ScopeCompile();
 
-            scope.b = q;
+            Console.WriteLine(f(scope));
 
-            var f = c.ScopeCompile<c>();
-
-            var r = f(q);
-            //var rr = f(qq);
-
-            Console.WriteLine(r);
-            //Console.WriteLine(rr);
-
-            scope.x = 3;
-            r = f(q);
-
-            Console.WriteLine(r);
 
 
             Console.ReadLine();
