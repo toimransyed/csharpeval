@@ -43,7 +43,7 @@ namespace ExpressionEvaluator.Operators
             }
             else
             {
-                return ((UnaryOperator) args.Op).Func(le);
+                return ((UnaryOperator)args.Op).Func(le);
             }
         }
 
@@ -60,7 +60,24 @@ namespace ExpressionEvaluator.Operators
 
             if (le.Type.IsDynamic() && re.Type.IsDynamic())
             {
-                return DynamicBinaryOperatorFunc(le, re, args.Op.ExpressionType);
+                var expressionType = args.Op.ExpressionType;
+
+                if (expressionType == ExpressionType.OrElse)
+                {
+                    le = Expression.IsTrue(Expression.Convert(le, typeof(bool)));
+                    expressionType = ExpressionType.Or;
+                    return Expression.Condition(le, Expression.Constant(true), Expression.Convert(DynamicBinaryOperatorFunc(Expression.Constant(false), re, expressionType), typeof(bool)));
+                }
+
+
+                if (expressionType == ExpressionType.AndAlso)
+                {
+                    le = Expression.IsFalse(Expression.Convert(le, typeof(bool)));
+                    expressionType = ExpressionType.And;
+                    return Expression.Condition(le, Expression.Constant(false), Expression.Convert(DynamicBinaryOperatorFunc(Expression.Constant(true), re, expressionType), typeof(bool)));
+                }
+
+                return DynamicBinaryOperatorFunc(le, re, expressionType);
             }
             else
             {
@@ -87,6 +104,7 @@ namespace ExpressionEvaluator.Operators
         {
             var expArgs = new List<Expression>() { le, re };
 
+
             var binderM = Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, le.Type, new CSharpArgumentInfo[]
 		            {
 			            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
@@ -103,11 +121,11 @@ namespace ExpressionEvaluator.Operators
             Expression truthy = args.ExprStack.Pop();
             Expression condition = args.ExprStack.Pop();
 
-            if (condition.Type != typeof (bool))
+            if (condition.Type != typeof(bool))
             {
                 condition = Expression.Convert(condition, typeof(bool));
             }
-            
+
             // perform implicit conversion on known types ???
             TypeConversion.Convert(ref falsy, ref truthy);
             return ((TernaryOperator)args.Op).Func(condition, truthy, falsy);

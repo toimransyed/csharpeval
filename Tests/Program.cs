@@ -107,6 +107,10 @@ namespace Tests
 
     }
 
+    public class MyClass
+    {
+        public Func<bool> Value { get; set; } 
+    }
 
 
     class Program
@@ -117,10 +121,20 @@ namespace Tests
             var x = new List<String>() { "Hello", "There", "World" };
             dynamic scope = new ExpandoObject();
             scope.x = x;
+            var data = new MyClass { Value = () => false };
+            var item = new MyClass { Value = () => true };
+            scope.data = data;
+            scope.item = item;
+
+            var a = scope.data.Value() && scope.item.Value();
+            //var b = !scope.data.Value() || scope.item.Value();
+            
+
             var p = scope.x[0];
 
+            // (data.Value && !item.Value) ? 'yes' : 'no'
 
-            var c = new CompiledExpression() { StringToParse = "x[0] + ', ' + x[2]" };
+            var c = new CompiledExpression() { StringToParse = "!data.Value() || item.Value()" };
             var f = c.ScopeCompile();
 
             Console.WriteLine(f(scope));
