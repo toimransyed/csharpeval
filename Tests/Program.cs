@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
@@ -109,9 +110,25 @@ namespace Tests
 
     public class MyClass
     {
-        public Func<bool> Value { get; set; } 
+        public Func<bool> Value { get; set; }
     }
 
+    public class Generic
+    {
+        public int GenericMethod<T, U>(U arg1, T arg2)
+            where T : IList
+            where U : IEnumerable
+        {
+            return 0;
+        }
+    }
+
+    public class Scope
+    {
+        public Generic g { get; set; }
+        public IList x { get; set; }
+        public int i { get; set; }
+    }
 
     class Program
     {
@@ -119,25 +136,40 @@ namespace Tests
         static void Main(string[] args)
         {
             var x = new List<String>() { "Hello", "There", "World" };
-            dynamic scope = new ExpandoObject();
+            var scope = new Scope();
+            var g = new Generic();
             scope.x = x;
+            scope.g = g;
+
+            scope.i = 0;
             var data = new MyClass { Value = () => false };
             var item = new MyClass { Value = () => true };
-            scope.data = data;
-            scope.item = item;
+            //scope.data = data;
+            //scope.item = item;
+            var tt = Enumerable.First<string>((IList<string>)scope.x);
 
-            var a = scope.data.Value() && scope.item.Value();
+            //var a = scope.data.Value() && scope.item.Value();
             //var b = !scope.data.Value() || scope.item.Value();
-            
+            var r = new Random();
+
+            //scope.r = r;
+
+
 
             var p = scope.x[0];
 
             // (data.Value && !item.Value) ? 'yes' : 'no'
 
-            var c = new CompiledExpression() { StringToParse = "!data.Value() || item.Value()" };
-            var f = c.ScopeCompile();
+            var c = new CompiledExpression() { StringToParse = "Enumerable.First(x)" };
+            c.RegisterType("Enumerable", typeof(Enumerable));
+            var f = c.ScopeCompile<Scope>();
+            g.GenericMethod<List<string>, IList>(x, x);
 
-            Console.WriteLine(f(scope));
+            for (int j = 0; j < 3; j++)
+            {
+                scope.i = j;
+                Console.WriteLine(f(scope));
+            }
 
 
 
