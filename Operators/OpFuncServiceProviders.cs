@@ -17,7 +17,7 @@ namespace ExpressionEvaluator.Operators
             string nextToken = ((MemberToken)args.T).Name;
             Expression le = args.ExprStack.Pop();
 
-            Expression result = ((MethodOperator)args.Op).Func(args.T.IsFunction, le, nextToken, args.Args);
+            Expression result = ((MethodOperator)args.Op).Func(args.T.IsFunction, args.T.IsCall, le, nextToken, args.Args);
 
             return result;
         }

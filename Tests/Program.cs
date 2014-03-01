@@ -109,7 +109,17 @@ namespace Tests
 
     public class MyClass
     {
-        public Func<bool> Value { get; set; } 
+        public int X { get; set; }
+        public Func<bool> Value { get; set; }
+        public void Foo()
+        {
+            X++;
+        }
+
+        public void Foo(int value)
+        {
+            X += value;
+        }
     }
 
 
@@ -128,18 +138,29 @@ namespace Tests
 
             var a = scope.data.Value() && scope.item.Value();
             //var b = !scope.data.Value() || scope.item.Value();
-            
+
 
             var p = scope.x[0];
 
             // (data.Value && !item.Value) ? 'yes' : 'no'
+            var c = new CompiledExpression() { StringToParse = "data.Foo(data.Foo(10))" };
+            c.RegisterType("data", data);
+            Console.WriteLine(data.X);
+            c.Call();
+            Console.WriteLine(data.X);
 
-            var c = new CompiledExpression() { StringToParse = "!data.Value() || item.Value()" };
-            var f = c.ScopeCompile();
+            var c1 = new CompiledExpression() { StringToParse = "Foo()" };
+            var f1 = c1.ScopeCompileCall<MyClass>();
+            Console.WriteLine(data.X);
+            f1(data);
+            Console.WriteLine(data.X);
 
-            Console.WriteLine(f(scope));
 
-
+            var c2 = new CompiledExpression() { StringToParse = "data.Foo()" };
+            var f2 = c2.ScopeCompileCall();
+            Console.WriteLine(scope.data.X);
+            f2(scope);
+            Console.WriteLine(scope.data.X);
 
             Console.ReadLine();
         }

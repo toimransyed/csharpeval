@@ -15,11 +15,12 @@ namespace ExpressionEvaluator.Operators
         /// Returns an Expression that accesses a member on an Expression
         /// </summary>
         /// <param name="isFunction">Determines whether the member being accessed is a function or a property</param>
+        /// <param name="isCall">Determines whether the member returns void</param>
         /// <param name="le">The expression that contains the member to be accessed</param>
         /// <param name="membername">The name of the member to access</param>
         /// <param name="args">Optional list of arguments to be passed if the member is a method</param>
         /// <returns></returns>
-        public static Expression MemberAccess(bool isFunction, Expression le, string membername, List<Expression> args)
+        public static Expression MemberAccess(bool isFunction, bool isCall, Expression le, string membername, List<Expression> args)
         {
             var argTypes = args.Select(x => x.Type);
 
@@ -38,7 +39,7 @@ namespace ExpressionEvaluator.Operators
                 instance = le;
                 isDynamic = type.IsDynamic();
             }
-
+                
             if (isFunction)
             {
                 if (isDynamic)
@@ -46,16 +47,30 @@ namespace ExpressionEvaluator.Operators
                     var expArgs = new List<Expression> { instance };
 
                     expArgs.AddRange(args);
-
-                    var binderM = Binder.InvokeMember(
-                            CSharpBinderFlags.None,
+    
+                    if (isCall)
+                    {
+                        var binderMC = Binder.InvokeMember(
+                            CSharpBinderFlags.ResultDiscarded,
                             membername,
                             null,
                             type,
                             expArgs.Select(x => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
                         );
 
+                        return Expression.Dynamic(binderMC, typeof(void), expArgs);
+                    }
+
+                    var binderM = Binder.InvokeMember(
+                        CSharpBinderFlags.None,
+                        membername,
+                        null,
+                        type,
+                        expArgs.Select(x => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                    );
+
                     return Expression.Dynamic(binderM, typeof(object), expArgs);
+
                 }
                 else
                 {
@@ -84,7 +99,7 @@ namespace ExpressionEvaluator.Operators
                     foreach (var info in methodInfos.OrderByDescending(m => m.GetParameters().Count()))
                     {
                         var parameterInfos = info.GetParameters();
-                        var lastParam = parameterInfos.Last();
+                        var lastParam = parameterInfos.Any() ? parameterInfos.Last() : null;
                         var newArgs = args.Take(parameterInfos.Length - 1).ToList();
                         var paramArgs = args.Skip(parameterInfos.Length - 1).ToList();
 
@@ -99,9 +114,12 @@ namespace ExpressionEvaluator.Operators
 
                         if (k > 0)
                         {
-                            if (Attribute.IsDefined(lastParam, typeof(ParamArrayAttribute)))
+                            if (lastParam != null)
                             {
-                                k += paramArgs.Sum(arg => TypeConversion.CanConvert(arg.Type, lastParam.ParameterType.GetElementType()));
+                                if (Attribute.IsDefined(lastParam, typeof(ParamArrayAttribute)))
+                                {
+                                    k += paramArgs.Sum(arg => TypeConversion.CanConvert(arg.Type, lastParam.ParameterType.GetElementType()));
+                                }
                             }
                         }
 

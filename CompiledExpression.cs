@@ -10,12 +10,12 @@ namespace ExpressionEvaluator
     public class CompiledExpression<T> : ExpressionCompiler
     {
         private Func<T> _compiledMethod = null;
+        private Action _compiledAction = null;
 
         public CompiledExpression()
         {
             Parser = new Parser();
             Parser.TypeRegistry = TypeRegistry;
-
         }
 
         public CompiledExpression(string expression)
@@ -24,11 +24,34 @@ namespace ExpressionEvaluator
             Parser.TypeRegistry = TypeRegistry;
         }
 
-        public Func<T> Compile()
+        public Func<T> Compile(bool isCall = false)
         {
             if (Expression == null) Expression = BuildTree();
             return Expression.Lambda<Func<T>>(Expression).Compile();
         }
+
+        /// <summary>
+        /// Compiles the expression to a function that returns void
+        /// </summary>
+        /// <returns></returns>
+        public Action CompileCall()
+        {
+            if (Expression == null) Expression = BuildTree(null, true);
+            return Expression.Lambda<Action>(Expression).Compile();
+        }
+
+
+        /// <summary>
+        /// Compiles the expression to a function that takes an object as a parameter and returns an object
+        /// </summary>s
+        /// <returns></returns>
+        public Action<U> ScopeCompileCall<U>()
+        {
+            var scopeParam = Expression.Parameter(typeof(U), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam, true);
+            return Expression.Lambda<Action<U>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
+        }
+
 
         public Func<object, T> ScopeCompile()
         {
@@ -47,13 +70,20 @@ namespace ExpressionEvaluator
 
         protected override void ClearCompiledMethod()
         {
-            _compiledMethod = null;
+            _compiledMethod = null; 
+            _compiledAction = null;
         }
 
         public T Eval()
         {
             if (_compiledMethod == null) _compiledMethod = Compile();
             return _compiledMethod();
+        }
+
+        public void Call()
+        {
+            if (_compiledAction == null) _compiledAction = CompileCall();
+            _compiledAction();
         }
 
         public object Global
@@ -63,7 +93,7 @@ namespace ExpressionEvaluator
                 Parser.Global = value;
             }
         }
- 
+
     }
 
     /// <summary>
@@ -72,6 +102,7 @@ namespace ExpressionEvaluator
     public class CompiledExpression : ExpressionCompiler
     {
         private Func<object> _compiledMethod = null;
+        private Action _compiledAction = null;
 
         public CompiledExpression()
         {
@@ -82,7 +113,7 @@ namespace ExpressionEvaluator
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression); 
+            Parser = new Parser(expression);
             Parser.TypeRegistry = TypeRegistry;
         }
 
@@ -97,6 +128,16 @@ namespace ExpressionEvaluator
         }
 
         /// <summary>
+        /// Compiles the expression to a function that returns void
+        /// </summary>
+        /// <returns></returns>
+        public Action CompileCall()
+        {
+            if (Expression == null) Expression = BuildTree(null, true);
+            return Expression.Lambda<Action>(Expression).Compile();
+        }
+
+        /// <summary>
         /// Compiles the expression to a function that takes an object as a parameter and returns an object
         /// </summary>
         /// <returns></returns>
@@ -105,6 +146,28 @@ namespace ExpressionEvaluator
             var scopeParam = Expression.Parameter(typeof(object), "scope");
             if (Expression == null) Expression = BuildTree(scopeParam);
             return Expression.Lambda<Func<dynamic, object>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+        }
+
+        /// <summary>
+        /// Compiles the expression to a function that takes an object as a parameter and returns an object
+        /// </summary>
+        /// <returns></returns>
+        public Action<object> ScopeCompileCall()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam, true);
+            return Expression.Lambda<Action<dynamic>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
+        }
+
+        /// <summary>
+        /// Compiles the expression to a function that takes an object as a parameter and returns an object
+        /// </summary>s
+        /// <returns></returns>
+        public Action<U> ScopeCompileCall<U>()
+        {
+            var scopeParam = Expression.Parameter(typeof(U), "scope");
+            if (Expression == null) Expression = BuildTree(scopeParam);
+            return Expression.Lambda<Action<U>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
         /// <summary>
@@ -122,12 +185,19 @@ namespace ExpressionEvaluator
         protected override void ClearCompiledMethod()
         {
             _compiledMethod = null;
+            _compiledAction = null;
         }
 
         public object Eval()
         {
             if (_compiledMethod == null) _compiledMethod = Compile();
             return _compiledMethod();
+        }
+
+        public void Call()
+        {
+            if (_compiledAction == null) _compiledAction = CompileCall();
+            _compiledAction();
         }
 
         public object Global

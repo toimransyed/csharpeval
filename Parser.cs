@@ -682,7 +682,7 @@ namespace ExpressionEvaluator
         /// Builds the expression tree from the token queue
         /// </summary>
         /// <returns></returns>
-        public Expression BuildTree(Expression scopeParam = null)
+        public Expression BuildTree(Expression scopeParam = null, bool isCall = false)
         {
             if (_tokenQueue.Count == 0) Parse(scopeParam != null);
 
@@ -702,7 +702,7 @@ namespace ExpressionEvaluator
             while (tempQueue.Count > 0)
             {
                 Token t = tempQueue.Dequeue();
-
+                t.IsCall = isCall && tempQueue.Count == 0;
                 if (isCastPending > -1) isCastPending--;
                 if (isCastPending == 0)
                 {
