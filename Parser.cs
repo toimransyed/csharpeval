@@ -122,7 +122,7 @@ namespace ExpressionEvaluator
                             bool isStringClosed = false;
                             _ptr++;
                             lastptr = _ptr;
-                            StringBuilder tokenbuilder = new StringBuilder();
+                            var tokenbuilder = new StringBuilder();
 
                             // check for escaped single-quote and backslash
                             while (IsInBounds())
@@ -184,7 +184,16 @@ namespace ExpressionEvaluator
 
                             string token = _pstr.Substring(lastptr, _ptr - lastptr);
 
-                            DateTime dt = DateTime.Parse(token);
+                            DateTime dt;
+                            if (token == "Now")
+                            {
+                                dt = DateTime.Now;
+                            }
+                            else
+                            {
+                                dt = DateTime.Parse(token);
+                            }
+
                             _tokenQueue.Enqueue(new Token() { Value = dt, IsIdent = true, Type = typeof(DateTime) });
                             _ptr++;
 
@@ -522,13 +531,13 @@ namespace ExpressionEvaluator
                             {
                                 if (_pstr[_ptr] == '(') depth++;
                                 if (_pstr[_ptr] == ')') depth--;
-                                if (_pstr[_ptr] == ',') containsComma = true; 
+                                if (_pstr[_ptr] == ',') containsComma = true;
                                 _ptr++;
                                 if (depth == 0) break;
                             }
 
                             _ptr--;
-                            
+
                             if (depth != 0)
                                 throw new Exception("Parenthesis mismatch");
 
@@ -557,7 +566,7 @@ namespace ExpressionEvaluator
                             if (!isCast)
                             {
                                 _opStack.Push(new OpToken() { Value = "(", Ptr = curptr + 1 });
-                                
+
                                 _ptr = curptr + 1;
                             }
 
@@ -739,7 +748,16 @@ namespace ExpressionEvaluator
                     }
                     // Arguments are in reverse order
                     args.Reverse();
-                    result = opfunc(new OpFuncArgs() { TempQueue = tempQueue, ExprStack = exprStack, T = t, Op = op, Args = args, ScopeParam = scopeParam });
+                    result = opfunc(new OpFuncArgs()
+                        {
+                            TempQueue = tempQueue, 
+                            ExprStack = exprStack, 
+                            T = t, 
+                            Op = op, 
+                            Args = args, 
+                            ScopeParam = scopeParam,
+                            Types = new List<string>() {"System.Linq"}
+                        });
                     args.Clear();
                     exprStack.Push(result);
                 }

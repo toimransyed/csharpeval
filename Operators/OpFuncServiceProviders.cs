@@ -11,7 +11,7 @@ namespace ExpressionEvaluator.Operators
     internal class OpFuncServiceProviders
     {
         public static Expression MethodOperatorFunc(
-            OpFuncArgs args
+            OpFuncArgs args 
             )
         {
             string nextToken = ((MemberToken)args.T).Name;
