@@ -66,6 +66,7 @@
     <Compile Include="Operators\IndexOperator.cs" />
     <Compile Include="Operators\IOperator.cs" />
     <Compile Include="Operators\MethodOperator.cs" />
+    <Compile Include="Operators\MethodResolution.cs" />
     <Compile Include="Operators\TypeExtensions.cs" />
     <Compile Include="Operators\TypeOperator.cs" />
     <Compile Include="Operators\UnaryOperator.cs" />
