@@ -231,9 +231,6 @@ namespace ExpressionEvaluator.Operators
         }
 
         private static readonly Type StringType = typeof(string);
-
-        private static readonly Type StringType = typeof(string);
-        private static readonly MethodInfo ToStringMethod = typeof(Convert).GetMethod("ToString", new Type[] { typeof(IFormatProvider) });
         private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString", new Type[] { typeof(CultureInfo) });
 
 
@@ -256,8 +253,6 @@ namespace ExpressionEvaluator.Operators
 
                 if (le.Type != typeof(string)) le = CallToString(le);
                 if (re.Type != typeof(string)) re = CallToString(re);
-                if (le.Type != StringType) le = Expression.Call(typeof(Convert), "ToString", null, new Expression[] { le, Expression.Constant(CultureInfo.InvariantCulture) });
-                if (re.Type != StringType) re = Expression.Call(typeof(Convert), "ToString", null, new Expression[] { re, Expression.Constant(CultureInfo.InvariantCulture) });
                 return Expression.Add(le, re, StringType.GetMethod("Concat", new Type[] { le.Type, re.Type }));
             }
             else

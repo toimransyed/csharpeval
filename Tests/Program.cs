@@ -180,8 +180,8 @@ namespace Tests
 
             var qq = (25.82).ToString("0.00", fr) + "px";
             var test = "(25.82).ToString('0.00') + 'px'";
-            var c = new CompiledExpression() { StringToParse = "int.Parse('25.82', fr)" };
-            c.RegisterType("fr", fr);
+            var cx = new CompiledExpression() { StringToParse = "int.Parse('25.82', fr)" };
+            cx.RegisterType("fr", fr);
 
 
             var c2 = new CompiledExpression() { StringToParse = "data.Foo()" };
