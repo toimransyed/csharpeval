@@ -127,12 +127,22 @@ namespace Tests
         }
     }
 
+    public class objHolder
+    {
+        public bool result { get; set; }
+    }
 
     class Program
     {
 
         static void Main(string[] args)
         {
+            var cc = new CompiledExpression() { StringToParse = "Convert.ToBoolean(obj.result)==true" };
+            object obj = new objHolder() { result = true };
+            cc.RegisterType("obj", obj);
+            cc.RegisterDefaultTypes();
+            var result = cc.Eval();
+
             var x = new List<String>() { "Hello", "There", "World" };
             dynamic scope = new ExpandoObject();
             scope.x = x;
@@ -140,7 +150,7 @@ namespace Tests
             var item = new MyClass { Value = () => true };
             scope.data = data;
             scope.item = item;
-
+            scope.i = 1;
             var a = scope.data.Value() && scope.item.Value();
             //var b = !scope.data.Value() || scope.item.Value();
 
@@ -165,9 +175,17 @@ namespace Tests
             Console.WriteLine(data.X);
             f1(data);
             Console.WriteLine(data.X);
+            System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
+            var fr = new CultureInfo("fr-FR");
+
+            var qq = (25.82).ToString("0.00", fr) + "px";
+            var test = "(25.82).ToString('0.00') + 'px'";
+            var c = new CompiledExpression() { StringToParse = "int.Parse('25.82', fr)" };
+            c.RegisterType("fr", fr);
 
 
             var c2 = new CompiledExpression() { StringToParse = "data.Foo()" };
+            var y = 12 + "px";
             var f2 = c2.ScopeCompileCall();
             Console.WriteLine(scope.data.X);
             f2(scope);
@@ -190,7 +208,6 @@ namespace Tests
             var c6 = new CompiledExpression() { StringToParse = "c.sum(1,2.0d)" };
             var f6 = c6.ScopeCompile();
             var x6 = f6(scope);
-
 
             Console.ReadLine();
         }

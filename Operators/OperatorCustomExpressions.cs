@@ -230,8 +230,10 @@ namespace ExpressionEvaluator.Operators
             throw new Exception(string.Format("Member not found: {0}.{1}", le.Type.Name, membername));
         }
 
+        private static readonly Type StringType = typeof(string);
 
         private static readonly Type StringType = typeof(string);
+        private static readonly MethodInfo ToStringMethod = typeof(Convert).GetMethod("ToString", new Type[] { typeof(IFormatProvider) });
         private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString", new Type[] { typeof(CultureInfo) });
 
 
@@ -254,7 +256,9 @@ namespace ExpressionEvaluator.Operators
 
                 if (le.Type != typeof(string)) le = CallToString(le);
                 if (re.Type != typeof(string)) re = CallToString(re);
-                return Expression.Add(le, re, typeof(string).GetMethod("Concat", new Type[] { le.Type, re.Type }));
+                if (le.Type != StringType) le = Expression.Call(typeof(Convert), "ToString", null, new Expression[] { le, Expression.Constant(CultureInfo.InvariantCulture) });
+                if (re.Type != StringType) re = Expression.Call(typeof(Convert), "ToString", null, new Expression[] { re, Expression.Constant(CultureInfo.InvariantCulture) });
+                return Expression.Add(le, re, StringType.GetMethod("Concat", new Type[] { le.Type, re.Type }));
             }
             else
             {
@@ -262,7 +266,7 @@ namespace ExpressionEvaluator.Operators
             }
         }
 
-        private static Type _stringType = typeof(string);
+
 
         /// <summary>
         /// Returns an Expression that access a 1-dimensional index on an Array expression 
@@ -272,9 +276,9 @@ namespace ExpressionEvaluator.Operators
         /// <returns></returns>
         public static Expression ArrayAccess(Expression le, Expression re)
         {
-            if (le.Type == _stringType)
+            if (le.Type == StringType)
             {
-                var mi = _stringType.GetMethod("ToCharArray", new Type[] { });
+                var mi = StringType.GetMethod("ToCharArray", new Type[] { });
                 le = Expression.Call(le, mi);
             }
 
