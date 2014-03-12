@@ -14,13 +14,13 @@ namespace ExpressionEvaluator
 
         public CompiledExpression()
         {
-            Parser = new Parser();
+            Parser = new AntlrParser();
             Parser.TypeRegistry = TypeRegistry;
         }
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression);
+            Parser = new AntlrParser(expression);
             Parser.TypeRegistry = TypeRegistry;
         }
 
@@ -106,14 +106,14 @@ namespace ExpressionEvaluator
 
         public CompiledExpression()
         {
-            Parser = new Parser();
+            Parser = new AntlrParser();
             Parser.TypeRegistry = TypeRegistry;
 
         }
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression);
+            Parser = new AntlrParser(expression);
             Parser.TypeRegistry = TypeRegistry;
         }
 

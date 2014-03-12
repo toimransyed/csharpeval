@@ -5,15 +5,15 @@ namespace ExpressionEvaluator
     public abstract class ExpressionCompiler
     {
         protected Expression Expression = null;
-        protected Parser Parser = null;
+        protected AntlrParser Parser = null;
         protected TypeRegistry TypeRegistry = new TypeRegistry();
         protected string Pstr = null;
 
         public string StringToParse
         {
-            get { return Parser.StringToParse; }
-            set { 
-                Parser.StringToParse = value;
+            get { return Parser.ExpressionString; }
+            set {
+                Parser.ExpressionString = value;
                 Expression = null;
                 ClearCompiledMethod();
             }
@@ -31,14 +31,14 @@ namespace ExpressionEvaluator
 
         protected Expression BuildTree(Expression scopeParam = null, bool isCall = false)
         {
-            return Parser.BuildTree(scopeParam, isCall);
+            return Expression = Parser.Parse(scopeParam, isCall);
         }
 
         protected abstract void ClearCompiledMethod();
 
         protected void Parse()
         {
-            Parser.Parse();
+            BuildTree(null, false);
         }
 
         public void RegisterNamespace(string p)
