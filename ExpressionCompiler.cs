@@ -49,5 +49,14 @@ namespace ExpressionEvaluator
         {
         }
 
+
+        protected Expression WrapExpression(Expression source, bool castToObject = true)
+        {
+            if (source.Type != typeof(void) && castToObject)
+            {
+                return Expression.Convert(source, typeof(object));
+            }
+            return Expression.Block(source, Expression.Constant(null));
+        }
     }
 }

@@ -167,8 +167,16 @@ namespace Tests
             var c = new CompiledExpression() { StringToParse = "data.Foo(30 + data.Bar(10))" };
             c.RegisterType("data", data);
             Console.WriteLine(data.X);
-            c.Call();
+            c.Eval();
+            //c.Call();
             Console.WriteLine(data.X);
+
+            var c8= new CompiledExpression() { StringToParse = "data.X  + '%'" };
+            c8.RegisterType("data", data);
+            Console.WriteLine(data.X);
+            var cr = c8.Eval();
+            Console.WriteLine(data.X);
+
 
             var c1 = new CompiledExpression() { StringToParse = "Foo()" };
             var f1 = c1.ScopeCompileCall<MyClass>();

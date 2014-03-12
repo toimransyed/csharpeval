@@ -14,19 +14,17 @@ namespace ExpressionEvaluator
 
         public CompiledExpression()
         {
-            Parser = new Parser();
-            Parser.TypeRegistry = TypeRegistry;
+            Parser = new Parser { TypeRegistry = TypeRegistry };
         }
 
         public CompiledExpression(string expression)
         {
-            Parser = new Parser(expression);
-            Parser.TypeRegistry = TypeRegistry;
+            Parser = new Parser(expression) { TypeRegistry = TypeRegistry };
         }
 
         public Func<T> Compile(bool isCall = false)
         {
-            if (Expression == null) Expression = BuildTree();
+            if (Expression == null) Expression = WrapExpression(BuildTree(), false);
             return Expression.Lambda<Func<T>>(Expression).Compile();
         }
 
@@ -56,21 +54,20 @@ namespace ExpressionEvaluator
         public Func<object, T> ScopeCompile()
         {
             var scopeParam = Expression.Parameter(typeof(object), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam);
-            return Expression.Lambda<Func<dynamic, T>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam));
+            return Expression.Lambda<Func<dynamic, T>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
         public Func<U, T> ScopeCompile<U>()
         {
             var scopeParam = Expression.Parameter(typeof(U), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam);
-            return Expression.Lambda<Func<U, T>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam));
+            return Expression.Lambda<Func<U, T>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
-
 
         protected override void ClearCompiledMethod()
         {
-            _compiledMethod = null; 
+            _compiledMethod = null;
             _compiledAction = null;
         }
 
@@ -123,8 +120,8 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Func<object> Compile()
         {
-            if (Expression == null) Expression = BuildTree();
-            return Expression.Lambda<Func<object>>(Expression.Convert(Expression, typeof(object))).Compile();
+            if (Expression == null) Expression = WrapExpression(BuildTree());
+            return Expression.Lambda<Func<object>>(Expression).Compile();
         }
 
         /// <summary>
@@ -144,8 +141,8 @@ namespace ExpressionEvaluator
         public Func<object, object> ScopeCompile()
         {
             var scopeParam = Expression.Parameter(typeof(object), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam);
-            return Expression.Lambda<Func<dynamic, object>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam));
+            return Expression.Lambda<Func<dynamic, object>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
         /// <summary>
@@ -178,8 +175,8 @@ namespace ExpressionEvaluator
         public Func<U, object> ScopeCompile<U>()
         {
             var scopeParam = Expression.Parameter(typeof(U), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam);
-            return Expression.Lambda<Func<U, object>>(Expression.Convert(Expression, typeof(object)), new ParameterExpression[] { scopeParam }).Compile();
+            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam));
+            return Expression.Lambda<Func<U, object>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
         protected override void ClearCompiledMethod()
