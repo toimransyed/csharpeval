@@ -236,9 +236,8 @@ namespace ExpressionEvaluator.Operators
 
         private static Expression CallToString(Expression instance)
         {
-            return Expression.Call(instance, ToStringMethodInfo, Expression.Constant(CultureInfo.InvariantCulture));
+            return Expression.Call(typeof(Convert), "ToString", null, instance, Expression.Constant(CultureInfo.InvariantCulture));
         }
-
 
         /// <summary>
         /// Extends the Add Expression handler to handle string concatenation
