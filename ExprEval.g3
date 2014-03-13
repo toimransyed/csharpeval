@@ -1,9 +1,12 @@
-﻿grammar ExprEval;
+﻿//
+//   Original grammar from the Antlr C# grammar project (https://antlrcsharp.codeplex.com) by anbrad
+//   Modified for generating LINQ Expressions for the C# Expression Evaluator project (https://csharpeval.codeplex.com) by RupertAvery 2014-03-11
+//
+grammar ExprEval;
 
 options {
-    language=CSharp3;
+    language = CSharp3;
 	backtrack = true;
-	rewrite = true; 
 }
 
 @lexer::namespace{ExpressionEvaluator}
@@ -136,18 +139,18 @@ public primary_expression returns [Expression value]
                 }
 				else
 				{
-                    $value = GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value);
+                    $value = ExpressionHelper.GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value);
                 }
 			}
 			else if($primary_expression_part.value.GetType() == typeof(BracketsToken))
 			{
-				$value = GetPropertyIndex($value, ((BracketsToken)$primary_expression_part.value).Values);
+				$value = ExpressionHelper.GetPropertyIndex($value, ((BracketsToken)$primary_expression_part.value).Values);
 			}
 			else if($primary_expression_part.value.GetType() == typeof(ArgumentsToken))
 			{
 				if(membername!=null)
 				{
-					$value = GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values);
+					$value = ExpressionHelper.GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values, IsCall);
 					membername = null;
 				}
 				else
@@ -161,7 +164,7 @@ public primary_expression returns [Expression value]
                 // try the simple one first, this has no argS and no expressions
                 // symantically could be object creation
                 | (delegate_creation_expression) => delegate_creation_expression// new FooDelegate (MyFunction)
-                | object_creation_expression
+                | oce=object_creation_expression { $value = $oce.value; }
                 | anonymous_object_creation_expression)                            // new {int X, string Y} 
     | sizeof_expression                        // sizeof (struct)
     | checked_expression                    // checked (...
@@ -184,7 +187,7 @@ public primary_expression_start returns [Expression value]:
 
 public primary_expression_part returns [PrimaryExpressionPartToken value]:
      access_identifier { $value = $access_identifier.value; }
-    | brackets_or_arguments   { $value = $brackets_or_arguments.value; }
+    | brackets_or_arguments { $value = $brackets_or_arguments.value; }
     | '++'
     | '--' ;
 
@@ -301,11 +304,14 @@ public anonymous_function_parameter_modifier:
 
 
 ///////////////////////////////////////////////////////
-public object_creation_expression: 
+public object_creation_expression returns [Expression value]: 
     // 'new'
     type   
         ( '('   argument_list?   ')'   object_or_collection_initializer?  
           | object_or_collection_initializer )
+		  {
+			$value = ExpressionHelper.New(GetType($type.text), $argument_list.values, null);
+		  }
     ;
 public object_or_collection_initializer: 
     '{'  (object_initializer 
@@ -449,11 +455,11 @@ public unary_expression returns [Expression value]:
     (cast_expression) => cast_expression { $value = $cast_expression.value; }
     | primary_or_array_creation_expression { $value = $primary_or_array_creation_expression.value; }
     | '+' uex=unary_expression 
-    | '-' uex=unary_expression  { $value = Expression.Negate($uex.value); }
-    | '!' uex=unary_expression  { $value = Expression.Not($uex.value); }
-    | '~' uex=unary_expression
-    | pre_increment_expression 
-    | pre_decrement_expression 
+    | '-' uex=unary_expression  { $value = ExpressionHelper.UnaryOperator($uex.value, ExpressionType.Negate); }
+    | '!' uex=unary_expression  { $value = ExpressionHelper.UnaryOperator($uex.value, ExpressionType.Not); }
+    | '~' uex=unary_expression  { $value = ExpressionHelper.UnaryOperator($uex.value, ExpressionType.Not); }
+    | uex=pre_increment_expression  { $value = ExpressionHelper.UnaryOperator($uex.value, ExpressionType.PreIncrementAssign); }
+    | uex=pre_decrement_expression  { $value = ExpressionHelper.UnaryOperator($uex.value, ExpressionType.PreDecrementAssign); }
     | pointer_indirection_expression
     | addressof_expression 
     ;
@@ -489,17 +495,12 @@ public multiplicative_expression returns [Expression value]:
 	{
 		switch($op.text) 
 		{ 
-			case "*": $value = Expression.Multiply($value, $rex.value); break;
-			case "/": $value = Expression.Divide($value, $rex.value); break;
-			case "\%": $value = Expression.Modulo($value, $rex.value); break;
+			case "*": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Multiply); break;
+			case "/": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Divide); break;
+			case "\%": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Modulo); break;
 		};
 	}
 	)*;
-
-    //unary_expression { $value = $unary_expression.value; }  
-    //| lex=unary_expression '*' rex=unary_expression  { $value = Expression.Multiply($lex.value, $rex.value); }  
-    //| lex=unary_expression '/' rex=unary_expression  { $value = Expression.Divide($lex.value, $rex.value); }  
-    //| lex=unary_expression '%' rex=unary_expression  { $value = Expression.Modulo($lex.value, $rex.value); }  ;
 
 public additive_expression returns [Expression value]:
 	lex=multiplicative_expression {
@@ -509,15 +510,12 @@ public additive_expression returns [Expression value]:
 	{
 		switch($op.text) 
 		{ 
-			case "+": $value = Expression.Add($value, $rex.value); break;
-			case "-": $value = Expression.Subtract($value, $rex.value); break;
+			case "+": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Add); break;
+			case "-": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Subtract); break;
 		};
 	}
 	)*;
 
-	//multiplicative_expression { $value = $multiplicative_expression.value; }  
- //   | lex=multiplicative_expression '+' rex=multiplicative_expression { $value = Expression.Add($lex.value, $rex.value); }  
- //   | lex=multiplicative_expression '-' rex=multiplicative_expression  { $value = Expression.Subtract($lex.value, $rex.value); }  ;
 // >> check needed (no whitespace)
 
 public shift_expression returns [Expression value]:
@@ -528,14 +526,11 @@ public shift_expression returns [Expression value]:
 	{
 		switch($op.text) 
 		{ 
-			case "<<": $value = Expression.LeftShift($value, $rex.value); break;
-			case ">>": $value = Expression.RightShift($value, $rex.value); break;
+			case "<<": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.LeftShift); break;
+			case ">>": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.RightShift); break;
 		};
 	})*
 	;
-    //additive_expression { $value = $additive_expression.value; }  
-    //| lex=additive_expression '<<' rex=additive_expression  { $value = Expression.LeftShift($lex.value, $rex.value); }  
-    //| lex=additive_expression '>>' rex=additive_expression  { $value = Expression.RightShift($lex.value, $rex.value); } ;  
 
 public relational_expression returns [Expression value]:
 	lex=shift_expression {
@@ -545,18 +540,13 @@ public relational_expression returns [Expression value]:
 	{
 		switch($op.text) 
 		{ 
-			case "<": $value = Expression.LessThan($value, $rex.value); break;
-			case ">": $value = Expression.GreaterThan($value, $rex.value); break;
-			case "<=": $value = Expression.LessThanOrEqual($value, $rex.value); break;
-			case ">=": $value = Expression.GreaterThanOrEqual($value, $rex.value); break;
+			case "<": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.LessThan); break;
+			case ">": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.GreaterThan); break;
+			case "<=": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.LessThanOrEqual); break;
+			case ">=": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.GreaterThanOrEqual); break;
 		};
 	})*
 	;
-    //shift_expression { $value = $shift_expression.value; }  
-    //| lex=shift_expression '<' rex=shift_expression  { $value = Expression.LessThan($lex.value, $rex.value); }  
-    //| lex=shift_expression '>' rex=shift_expression  { $value = Expression.GreaterThan($lex.value, $rex.value); }  
-    //| lex=shift_expression '>=' rex=shift_expression  { $value = Expression.LessThanOrEqual($lex.value, $rex.value); }  
-    //| lex=shift_expression '<=' rex=shift_expression  { $value = Expression.GreaterThanOrEqual($lex.value, $rex.value); }  ;
     //| lex=shift_expression 'is' rex=shift_expression  { $value = Expression.TypeIs($lex.value, $rex.value); }  
     //| lex=shift_expression 'as' rex=shift_expression  { $value = Expression.TypeAs($lex.value, $rex.value); }  ;
 
@@ -568,14 +558,11 @@ public equality_expression returns [Expression value]:
 	{
 		switch($op.text) 
 		{ 
-			case "==": $value = Expression.Equal($value, $rex.value); break;
-			case "!=": $value = Expression.NotEqual($value, $rex.value); break;
+			case "==": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Equal); break;
+			case "!=": $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.NotEqual); break;
 		};
 	})*
 	;
-    //relational_expression  { $value = $relational_expression.value; }  
-    //| lex=relational_expression '==' rex=relational_expression  { $value = Expression.Equal($lex.value, $rex.value); }  
-    //| lex=relational_expression '!=' rex=relational_expression  { $value = Expression.NotEqual($lex.value, $rex.value); }  ;
 
 public and_expression returns [Expression value]:
 	lex=equality_expression {
@@ -583,12 +570,9 @@ public and_expression returns [Expression value]:
 	}
 	('&' rex=equality_expression
 	{
-		$value = Expression.And($value, $rex.value);
+		$value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.And);
 	})*
 	;
-
-    //equality_expression   { $value = $equality_expression.value; }  
-    //| lex=equality_expression '&' rex=equality_expression  { $value = Expression.And($lex.value, $rex.value); }    ;
 
 public exclusive_or_expression returns [Expression value]:
 	lex=and_expression {
@@ -596,10 +580,8 @@ public exclusive_or_expression returns [Expression value]:
 	}
 	('^' rex=and_expression
 	{
-		$value = Expression.ExclusiveOr($value, $rex.value);
+		$value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.ExclusiveOr);
 	})*;
-    //and_expression   { $value = $and_expression.value; }  
-    //| lex=and_expression '^' rex=and_expression  { $value = Expression.ExclusiveOr($lex.value, $rex.value); }    ;
 
 public inclusive_or_expression returns [Expression value]:
 	lex=exclusive_or_expression {
@@ -607,11 +589,9 @@ public inclusive_or_expression returns [Expression value]:
 	}
 	('|' rex=exclusive_or_expression
 	{
-		 $value = Expression.Or($value, $rex.value);
+		 $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Or);
 	})*
 	;
-    //exclusive_or_expression   { $value = $exclusive_or_expression.value; }  
-    //| lex=exclusive_or_expression '|' rex=exclusive_or_expression  { $value = Expression.Or($lex.value, $rex.value); }    ;
 
 public conditional_and_expression returns [Expression value]:
 	lex=inclusive_or_expression {
@@ -619,11 +599,9 @@ public conditional_and_expression returns [Expression value]:
 	}
 	('&&' rex=inclusive_or_expression
 	{
-		 $value = Expression.AndAlso($value, $rex.value);
+		 $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.AndAlso);
 	})*
 	;
-    //inclusive_or_expression   { $value = $inclusive_or_expression.value; }  
-    //| lex=inclusive_or_expression '&&' rex=inclusive_or_expression  { $value = Expression.AndAlso($lex.value, $rex.value); }    ;
 
 public conditional_or_expression returns [Expression value]:
 	lex=conditional_and_expression {
@@ -631,11 +609,9 @@ public conditional_or_expression returns [Expression value]:
 	}
 	('||' rex=conditional_and_expression
 	{
-		$value = Expression.OrElse($value, $rex.value);  
+		$value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.OrElse);  
 	})*
 	;
-	//conditional_and_expression   { $value = $conditional_and_expression.value; }  
- //   | lex=conditional_and_expression '||' rex=conditional_and_expression  { $value = Expression.OrElse($lex.value, $rex.value); }    ;
 
 public null_coalescing_expression returns [Expression value]:
 	lex=conditional_or_expression {
@@ -643,11 +619,9 @@ public null_coalescing_expression returns [Expression value]:
 	}
 	('??' rex=conditional_or_expression
 	{
-		 $value = Expression.Coalesce($value, $rex.value); 
+		 $value = ExpressionHelper.BinaryOperator($value, $rex.value, ExpressionType.Coalesce); 
 	})*
 	;
-	//conditional_or_expression   { $value = $conditional_or_expression.value; }  
- //   | lex=conditional_or_expression '??' rex=conditional_or_expression  { $value = Expression.Coalesce($lex.value, $rex.value); }    ;
 
 public conditional_expression returns [Expression value]:
 	null_coalescing_expression {
@@ -655,11 +629,9 @@ public conditional_expression returns [Expression value]:
 	}
 	('?' iftrue=expression ':' iffalse=expression
 	{
-		 $value = Expression.IfThenElse($value, $iftrue.value, $iffalse.value);
+		 $value = ExpressionHelper.Condition($value, $iftrue.value, $iffalse.value);
 	})?
 	;
-	//null_coalescing_expression   { $value = $null_coalescing_expression.value; }  
-    //| cond=null_coalescing_expression '?' iftrue=expression ':' iffalse=expression { $value = Expression.IfThenElse($cond.value, $iftrue.value, $iffalse.value); } ;
      
 ///////////////////////////////////////////////////////
 //    lambda Section
@@ -1257,12 +1229,13 @@ public also_keyword:
     | 'endif' | 'define' | 'undef';
 
 public literal returns [Expression value]:
-    Real_literal { $value = ParseRealLiteral($Real_literal.text); }
-    | NUMBER { $value = ParseIntLiteral($NUMBER.text); }
-    | Hex_number { $value = Expression.Constant($Hex_number.text); }
-    | Character_literal { $value = Expression.Constant($Character_literal.text); }
-    | STRINGLITERAL { $value = Expression.Constant($STRINGLITERAL.text); }
-    | Verbatim_string_literal { $value = Expression.Constant($Verbatim_string_literal.text); }
+    Real_literal { $value = ExpressionHelper.ParseRealLiteral($Real_literal.text); }
+//    | Date_literal { $value = ExpressionHelper.ParseDateLiteral($Date_literal.text); }
+    | NUMBER { $value = ExpressionHelper.ParseIntLiteral($NUMBER.text); }
+    | Hex_number { $value = ExpressionHelper.ParseHexLiteral($Hex_number.text); }
+    | Character_literal { $value = ExpressionHelper.ParseCharLiteral($Character_literal.text); }
+    | STRINGLITERAL { $value = ExpressionHelper.ParseStringLiteral($STRINGLITERAL.text); }
+    | Verbatim_string_literal { $value = ExpressionHelper.ParseStringLiteral($Verbatim_string_literal.text); }
     | TRUE { $value = Expression.Constant(true); }
     | FALSE { $value = Expression.Constant(false); }
     | NULL  { $value = Expression.Constant(null); }
@@ -1308,7 +1281,8 @@ COMMENT:
     { Skip(); } ;
 STRINGLITERAL
     :
-    '"' (EscapeSequence | ~('"' | '\\'))* '"' ;
+    '"' (EscapeSequence | ~('"' | '\\'))* '"'
+	| '\'' (EscapeSequence | ~('\'' | '\\'))* '\'' ;  // ExpressionEvaluator in-string strings
 Verbatim_string_literal:
     '@'   '"' Verbatim_string_literal_character* '"' ;
 fragment
@@ -1336,13 +1310,16 @@ fragment GooBallIdentifier
     : IdentifierStart IdentifierPart* ;
 
 //---------------------------------------------------------
+// Date_literal:
+//  '#' ~('#')+ '#';
 Real_literal:
     Decimal_digits   '.'   Decimal_digits   Exponent_part?   Real_type_suffix?
     | '.'   Decimal_digits   Exponent_part?   Real_type_suffix?
     | Decimal_digits   Exponent_part   Real_type_suffix?
     | Decimal_digits   Real_type_suffix;
 Character_literal:
-    '\''
+	// Expression Eval changes
+    'c\''
    (   EscapeSequence
     // upto 3 multi byte unicode chars
    |   ~( '\\' | '\'' | '\r' | '\n' )        

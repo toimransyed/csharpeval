@@ -137,10 +137,14 @@ namespace Tests
 
         static void Main(string[] args)
         {
-            var cc = new CompiledExpression() { StringToParse = "Convert.ToBoolean(obj.result)==true" };
+            var registry = new TypeRegistry();
+    
             object obj = new objHolder() { result = true };
-            cc.RegisterType("obj", obj);
-            cc.RegisterDefaultTypes();
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterDefaultTypes();
+        
+            var cc = new CompiledExpression() { StringToParse = "Convert.ToBoolean(obj.result)==true", TypeRegistry = registry };
             var result = cc.Eval();
 
             var x = new List<String>() { "Hello", "There", "World" };
@@ -154,6 +158,9 @@ namespace Tests
             var a = scope.data.Value() && scope.item.Value();
             //var b = !scope.data.Value() || scope.item.Value();
 
+            registry.RegisterSymbol("data", data);
+
+
             System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
             var pi = Convert.ToString(3.141592654);
             var xs = 2d;
@@ -164,15 +171,13 @@ namespace Tests
             var p = scope.x[0];
 
             // (data.Value && !item.Value) ? 'yes' : 'no'
-            var c = new CompiledExpression() { StringToParse = "data.Foo(30 + data.Bar(10))" };
-            c.RegisterType("data", data);
+            var c = new CompiledExpression() { StringToParse = "data.Foo(30 + data.Bar(10))", TypeRegistry = registry };
             Console.WriteLine(data.X);
             c.Eval();
             //c.Call();
             Console.WriteLine(data.X);
 
-            var c8= new CompiledExpression() { StringToParse = "data.X  + '%'" };
-            c8.RegisterType("data", data);
+            var c8 = new CompiledExpression() { StringToParse = "data.X  + '%'", TypeRegistry = registry };
             Console.WriteLine(data.X);
             var cr = c8.Eval();
             Console.WriteLine(data.X);
@@ -183,16 +188,14 @@ namespace Tests
             Console.WriteLine(data.X);
             f1(data);
             Console.WriteLine(data.X);
-            System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-FR");
-            var fr = new CultureInfo("fr-FR");
 
-            var qq = (25.82).ToString("0.00", fr) + "px";
+
+            var qq = (25.82).ToString("0.00", new CultureInfo("fr-FR")) + "px";
             var test = "(25.82).ToString('0.00') + 'px'";
-            var cx = new CompiledExpression() { StringToParse = "int.Parse('25.82', fr)" };
-            cx.RegisterType("fr", fr);
+            var cx = new CompiledExpression() { StringToParse = "int.Parse('25.82', new CultureInfo(\"fr-FR\"))" };
 
 
-            var c2 = new CompiledExpression() { StringToParse = "$scope.data.Foo()" };
+            var c2 = new CompiledExpression() { StringToParse = "$scope.data.Foo();" };
             var y = 12 + "px";
             var f2 = c2.ScopeCompileCall();
             Console.WriteLine(scope.data.X);

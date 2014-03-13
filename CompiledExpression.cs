@@ -163,7 +163,7 @@ namespace ExpressionEvaluator
         public Action<TParam> ScopeCompileCall<TParam>()
         {
             var scopeParam = Expression.Parameter(typeof(TParam), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam);
+            if (Expression == null) Expression = WrapToVoid(BuildTree(scopeParam));
             return Expression.Lambda<Action<TParam>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 

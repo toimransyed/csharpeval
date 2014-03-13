@@ -10,6 +10,13 @@ using UnitTestProject1;
 
 namespace ExpressionEvaluator.Tests
 {
+    public class TestClass
+    {
+        public TestClass(int value)
+        {
+
+        }
+    }
     /// <summary>
     /// Summary description for UnitTest1
     /// </summary>
@@ -66,7 +73,7 @@ namespace ExpressionEvaluator.Tests
         [TestMethod]
         [ExpectedException(typeof(Exception))]
         public void ParseInvalidNumericThrowsException()
-        {            
+        {
             var str = "2.55X";
             var c = new CompiledExpression(str);
             var ret = c.Eval();
@@ -76,12 +83,22 @@ namespace ExpressionEvaluator.Tests
         public void UnderscoreVariables()
         {
             var str = "1 | VARIABLE_NAME | _VARNAME";
-            var c = new CompiledExpression(str);
-            c.RegisterType("VARIABLE_NAME", 16);
-            c.RegisterType("_VARNAME", 32);
+            var t = new TypeRegistry();
+            t.RegisterSymbol("VARIABLE_NAME", 16);
+            t.RegisterSymbol("_VARNAME", 32);
+            var c = new CompiledExpression(str) { TypeRegistry = t };
             var ret = c.Eval();
         }
 
+        [TestMethod]
+        public void New()
+        {
+            var str = "new TestClass(123)";
+            var t = new TypeRegistry();
+            t.RegisterSymbol("TestClass", typeof(TestClass));
+            var c = new CompiledExpression<TestClass>(str) { TypeRegistry = t };
+            var ret = c.Eval();
+        }
 
         public class Xer
         {
@@ -126,7 +143,7 @@ namespace ExpressionEvaluator.Tests
             var str = "1 + 2 * 3";
             var c = new CompiledExpression(str);
             var ret = c.Eval();
-            var  y = 1 + 2 * 3;
+            var y = 1 + 2 * 3;
             Assert.AreEqual(ret, 7);
             Assert.AreEqual(ret, y);
         }
@@ -201,17 +218,16 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
-        public void NameValueTest()
+        public void DynamicsTest()
         {
             //
             // Expando Objects
             //
             dynamic myObj = new ExpandoObject();
             myObj.User = "testUser";
-
-            CompiledExpression compiler = new CompiledExpression();
-            compiler.RegisterType("myObj", myObj);
-            compiler.StringToParse = "myObj.User";
+            var t = new TypeRegistry();
+            t.RegisterSymbol("myObj", myObj);
+            var compiler = new CompiledExpression { TypeRegistry = t, StringToParse = "myObj.User" };
             compiler.Compile();
             var result = compiler.Eval();
 
@@ -226,11 +242,11 @@ namespace ExpressionEvaluator.Tests
             dynamic dynamicList = new PropertyExtensibleObject(testList);
 
             Assert.AreEqual(dynamicList.User, "testUserdynamic"); //test pass 
+            var tr = new TypeRegistry();
+            tr.RegisterSymbol("dynamicList", dynamicList);
 
-            compiler = new CompiledExpression();
-            compiler.RegisterType("dynamicList", dynamicList);
-            compiler.StringToParse = "dynamicList.User";
-            compiler.Compile();   //!!!!!!FAILS here with this message : Member not found: PropertyExtensibleObject.User
+            compiler = new CompiledExpression { TypeRegistry = tr, StringToParse = "dynamicList.User" };
+            compiler.Compile();
             result = compiler.Eval();
 
             Assert.AreEqual(result, "testUserdynamic");

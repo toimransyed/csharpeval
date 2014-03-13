@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 
 namespace ExpressionEvaluator
 {
@@ -6,31 +7,24 @@ namespace ExpressionEvaluator
     {
         protected Expression Expression = null;
         protected AntlrParser Parser = null;
-        protected TypeRegistry TypeRegistry = new TypeRegistry();
+        public TypeRegistry TypeRegistry { get; set; }
+
         protected string Pstr = null;
 
         public string StringToParse
         {
             get { return Parser.ExpressionString; }
-            set {
+            set
+            {
                 Parser.ExpressionString = value;
                 Expression = null;
                 ClearCompiledMethod();
             }
         }
 
-        public void RegisterDefaultTypes()
-        {
-            TypeRegistry.RegisterDefaultTypes();
-        }
-
-        public void RegisterType(string key, object type)
-        {
-            TypeRegistry.Add(key, type);
-        }
-
         protected Expression BuildTree(Expression scopeParam = null, bool isCall = false)
         {
+            Parser.TypeRegistry = TypeRegistry;
             return Expression = Parser.Parse(scopeParam, isCall);
         }
 
@@ -41,22 +35,25 @@ namespace ExpressionEvaluator
             BuildTree(null, false);
         }
 
-        public void RegisterNamespace(string p)
-        {
-        }
-
-        public void RegisterAssembly(System.Reflection.Assembly assembly)
-        {
-        }
-
-
         protected Expression WrapExpression(Expression source, bool castToObject = true)
         {
-            if (source.Type != typeof(void) && castToObject)
+            if (source.Type == typeof(void))
             {
-                return Expression.Convert(source, typeof(object));
+                return WrapToNull(source);
             }
+            return castToObject ? Expression.Convert(source, typeof(object)) : Expression;
+        }
+
+        protected Expression WrapToVoid(Expression source)
+        {
+            return Expression.Block(source, Expression.Empty());
+        }
+
+        protected Expression WrapToNull(Expression source)
+        {
             return Expression.Block(source, Expression.Constant(null));
         }
+
+
     }
 }

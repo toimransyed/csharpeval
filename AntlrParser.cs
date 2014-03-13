@@ -13,22 +13,15 @@ namespace ExpressionEvaluator
         public string ExpressionString { get; set; }
         public Expression Expression { get; set; }
 
-        public Dictionary<string, object> TypeRegistry { get; set; }
+        public TypeRegistry TypeRegistry { get; set; }
 
         public AntlrParser()
         {
-            TypeRegistry = new Dictionary<string, object>();
         }
 
         public AntlrParser(string expression)
         {
             ExpressionString = expression;
-            TypeRegistry = new Dictionary<string, object>();
-        }
-
-        public void RegisterType(string identifier, object value)
-        {
-            TypeRegistry.Add(identifier, value);
         }
 
         public Expression Parse(Expression scope, bool isCall = false)
@@ -37,6 +30,7 @@ namespace ExpressionEvaluator
             var input = new ANTLRInputStream(ms);
             var lexer = new ExprEvalLexer(input);
             var tokens = new CommonTokenStream(lexer);
+            if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
             var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
             do
             {
@@ -44,13 +38,6 @@ namespace ExpressionEvaluator
             } while (parser.input.Index == 0);
 
             return Expression;
-        }
-
-        public T Eval<T>()
-        {
-            Parse(null, false);
-            var funcexp = Expression.Lambda<Func<T>>(Expression, null).Compile();
-            return funcexp();
         }
 
         public object Global { get; set; }
