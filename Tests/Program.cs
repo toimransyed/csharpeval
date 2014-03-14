@@ -183,7 +183,7 @@ namespace Tests
             Console.WriteLine(data.X);
 
 
-            var c1 = new CompiledExpression() { StringToParse = "$scope.Foo()" };
+            var c1 = new CompiledExpression() { StringToParse = "Foo()" };
             var f1 = c1.ScopeCompileCall<MyClass>();
             Console.WriteLine(data.X);
             f1(data);
@@ -195,7 +195,7 @@ namespace Tests
             var cx = new CompiledExpression() { StringToParse = "int.Parse('25.82', new CultureInfo(\"fr-FR\"))" };
 
 
-            var c2 = new CompiledExpression() { StringToParse = "$scope.data.Foo();" };
+            var c2 = new CompiledExpression() { StringToParse = "data.Foo();" };
             var y = 12 + "px";
             var f2 = c2.ScopeCompileCall();
             Console.WriteLine(scope.data.X);
@@ -204,19 +204,19 @@ namespace Tests
 
             scope.c = new c();
 
-            var c3 = new CompiledExpression() { StringToParse = "$scope.c.sum(1,2,3,4,5,6,7,8)" };
+            var c3 = new CompiledExpression() { StringToParse = "c.sum(1,2,3,4,5,6,7,8)" };
             var f3 = c3.ScopeCompile();
             var x3 = f3(scope);
 
-            var c4 = new CompiledExpression() { StringToParse = "$scope.c.sum(1,2)" };
+            var c4 = new CompiledExpression() { StringToParse = "c.sum(1,2)" };
             var f4 = c4.ScopeCompile();
             var x4 = f4(scope);
 
-            var c5 = new CompiledExpression() { StringToParse = "$scope.c.sum(1.0d,2.0d)" };
+            var c5 = new CompiledExpression() { StringToParse = "c.sum(1.0d,2.0d)" };
             var f5 = c5.ScopeCompile();
             var x5 = f5(scope);
 
-            var c6 = new CompiledExpression() { StringToParse = "$scope.c.sum(1,2.0d)" };
+            var c6 = new CompiledExpression() { StringToParse = "c.sum(1,2.0d)" };
             var f6 = c6.ScopeCompile();
             var x6 = f6(scope);
 

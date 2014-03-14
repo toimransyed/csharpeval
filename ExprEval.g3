@@ -37,6 +37,8 @@ using System.Linq.Expressions;
 
 @members
 {
+	bool fakedot;
+
     protected bool is_class_modifier() 
     {
         return false;
@@ -126,10 +128,21 @@ public class_member_declaration:
 public primary_expression returns [Expression value]
 @init{
 	string membername = null;
+	int savepoint = 0;
 }: 
     ('this'    brackets) => 'this'   brackets   (primary_expression_part)*
     | ('base'   brackets) => 'base'   brackets   (primary_expression_part)*
-    | primary_expression_start { $value = $primary_expression_start.value; }  (primary_expression_part  
+    | { savepoint = input.Mark(); } 
+		primary_expression_start 
+		{ 
+			$value = $primary_expression_start.value; 
+			if( $value == null ){
+				$value = Scope;
+				input.Rewind(savepoint);
+				fakedot = true;
+			}
+		}  
+		(primary_expression_part
 		{ 
 			if($primary_expression_part.value.GetType() == typeof(AccessIdentifierToken))
 			{
@@ -158,6 +171,7 @@ public primary_expression returns [Expression value]
 					// $value = GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values);
 				}
 			}
+			fakedot = false;
 		})* 
     | 'new' (   (object_creation_expression   ('.'|'->'|'[')) => 
                     object_creation_expression   (primary_expression_part)+         // new Foo(arg, arg).Member
@@ -186,7 +200,9 @@ public primary_expression_start returns [Expression value]:
     ;
 
 public primary_expression_part returns [PrimaryExpressionPartToken value]:
-     access_identifier { $value = $access_identifier.value; }
+// fake an access identifer if Scope is set
+    {fakedot}?=> type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.text }; }
+    | access_identifier { $value = $access_identifier.value; }
     | brackets_or_arguments { $value = $brackets_or_arguments.value; }
     | '++'
     | '--' ;
@@ -1217,7 +1233,7 @@ public predefined_type:
     | 'short'  | 'string' | 'uint'   | 'ulong'  | 'ushort' ;
 
 public identifier returns [Expression value]:
-    IDENTIFIER { $value = GetIdentifier($IDENTIFIER.text); } | '$scope' { $value = Scope; } | also_keyword; 
+    IDENTIFIER { $value = GetIdentifier($IDENTIFIER.text); } | also_keyword; 
 
 public keyword:
     'abstract' | 'as' | 'base' | 'bool' | 'break' | 'byte' | 'case' |  'catch' | 'char' | 'checked' | 'class' | 'const' | 'continue' | 'decimal' | 'default' | 'delegate' | 'do' |    'double' | 'else' |     'enum'  | 'event' | 'explicit' | 'extern' | 'false' | 'finally' | 'fixed' | 'float' | 'for' | 'foreach' | 'goto' | 'if' | 'implicit' | 'in' | 'int' | 'interface' | 'internal' | 'is' | 'lock' | 'long' | 'namespace' | 'new' | 'null' | 'object' | 'operator' | 'out' | 'override' | 'params' | 'private' | 'protected' | 'public' | 'readonly' | 'ref' | 'return' | 'sbyte' | 'sealed' | 'short' | 'sizeof' | 'stackalloc' | 'static' | 'string' | 'struct' | 'switch' | 'this' | 'throw' | 'true' | 'try' | 'typeof' | 'uint' | 'ulong' | 'unchecked' | 'unsafe' | 'ushort' | 'using' | 'virtual' | 'void' | 'volatile' ;

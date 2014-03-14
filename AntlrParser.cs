@@ -29,7 +29,7 @@ namespace ExpressionEvaluator
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(ExpressionString));
             var input = new ANTLRInputStream(ms);
             var lexer = new ExprEvalLexer(input);
-            var tokens = new CommonTokenStream(lexer);
+            var tokens = new TokenRewriteStream(lexer);
             if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
             var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
             do
