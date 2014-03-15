@@ -74,7 +74,7 @@ namespace ExpressionEvaluator.Tests
         [ExpectedException(typeof(Exception))]
         public void ParseInvalidNumericThrowsException()
         {
-            var str = "2.55X";
+            var str = "2.55 + 32";
             var c = new CompiledExpression(str);
             var ret = c.Eval();
         }
@@ -125,6 +125,18 @@ namespace ExpressionEvaluator.Tests
             Assert.IsTrue(ret.GetType() == typeof(System.Double));
             Assert.IsTrue(Convert.ToDouble(ret) == 3.5D);
         }
+
+
+        [TestMethod]
+        public void Assignment()
+        {
+            var str = "x = 1";
+            var c = new CompiledExpression(str);
+            var ret = c.Eval();
+            Assert.IsTrue(ret.GetType() == typeof(System.Double));
+            Assert.IsTrue(Convert.ToDouble(ret) == 3.5D);
+        }
+
 
         [TestMethod]
         public void TernaryOperator()

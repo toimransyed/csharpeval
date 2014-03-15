@@ -79,6 +79,44 @@ namespace ExpressionEvaluator
 
         }
 
+        public static Expression Assign(Expression le, Expression re)
+        {
+            // remove leading dot
+            //membername = membername.Substring(1);
+
+            Expression instance = null;
+            Type type = null;
+
+            var isDynamic = false;
+            var isRuntimeType = false;
+
+            type = le.Type;
+            instance = le;
+            isDynamic = type.IsDynamic();
+
+            if (isDynamic)
+            {
+                var dle = (DynamicExpression)le;
+                var membername = ((GetMemberBinder)dle.Binder).Name;
+                instance = dle.Arguments[0];
+
+                var binder = Binder.SetMember(
+                    CSharpBinderFlags.None,
+                    membername,
+                    type,
+                    new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
+                    );
+
+                return Expression.Dynamic(binder, typeof(object), instance,re);
+
+            }
+            return Expression.Assign(le, re);
+
+            throw new Exception();
+        }
+
+
+
         public static Expression GetProperty(Expression le, string membername)
         {
             // remove leading dot
@@ -193,13 +231,13 @@ namespace ExpressionEvaluator
                 var mis = MethodResolution.GetApplicableMembers(type, membername, args);
                 var methodInfo = (MethodInfo)mis[0];
 
-                var typeArgs = methodInfo.GetGenericArguments();
+                var returnTypeArgs = methodInfo.GetGenericArguments();
 
-                Type[] genericArgTypes = null;
+                Dictionary<string, Type> genericArgTypes = null;
 
                 if (methodInfo.IsGenericMethod)
                 {
-                    genericArgTypes = new Type[typeArgs.Count()];
+                    genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
                 }
 
                 // if the method is generic, try to get type args from method, if none, try to get type args from parameters
@@ -217,7 +255,9 @@ namespace ExpressionEvaluator
                             if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
                                 genericArgTypes != null)
                             {
-                                genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                                genericArgTypes[parameterInfo.Name] = args[index].Type;
+
+                                //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
                                 args[index] = Expression.Convert(args[index],
                                                                  parameterInfos[index].ParameterType
                                                                                       .GetGenericTypeDefinition()
@@ -226,15 +266,28 @@ namespace ExpressionEvaluator
                             if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericType &&
                                 genericArgTypes != null)
                             {
+
                                 foreach (var pInfoGenericArgType in parameterInfo.ParameterType.GetGenericArguments())
                                 {
-                                    genericArgTypes[pInfoGenericArgType.GenericParameterPosition] =
-                                        args[index].Type.GetElementType() ?? typeof(string);
+                                    if (!genericArgTypes.ContainsKey(pInfoGenericArgType.Name))
+                                    {
+                                        genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+                                    }
+                                    else
+                                    {
+                                        if (genericArgTypes[pInfoGenericArgType.Name] == null)
+                                        {
+                                            genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+
+                                        }
+                                    }
+                                    //genericArgTypes[parameterInfo.Position] =
+                                    //    args[index].Type.GetGenericArguments()[0] ?? typeof(string);
                                 }
-                                args[index] = Expression.Convert(args[index],
-                                                                 parameterInfos[index].ParameterType
-                                                                                      .GetGenericTypeDefinition()
-                                                                                      .MakeGenericType(typeof(string)));
+                                //args[index] = Expression.Convert(args[index],
+                                //                                 parameterInfos[index].ParameterType
+                                //                                                      .GetGenericTypeDefinition()
+                                //                                                      .MakeGenericType(typeof(string)));
                             }
                         }
                         else
@@ -242,7 +295,8 @@ namespace ExpressionEvaluator
                             if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
                                 genericArgTypes != null)
                             {
-                                genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                                genericArgTypes[parameterInfo.Name] = args[index].Type;
+                                //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
                             }
                             args[index] = TypeConversion.Convert(args[index], parameterInfo.ParameterType);
                         }
@@ -252,7 +306,7 @@ namespace ExpressionEvaluator
                     {
                         if (methodInfo.IsGenericMethod)
                         {
-                            return Expression.Call(type, membername, genericArgTypes, args.ToArray());
+                            return Expression.Call(type, membername, genericArgTypes.Values.ToArray(), args.ToArray());
                         }
                         else
                         {
@@ -263,7 +317,7 @@ namespace ExpressionEvaluator
                     {
                         if (methodInfo.IsGenericMethod)
                         {
-                            return Expression.Call(instance, membername, genericArgTypes, args.ToArray());
+                            return Expression.Call(instance, membername, genericArgTypes.Values.ToArray(), args.ToArray());
                         }
                         else
                         {
@@ -429,7 +483,7 @@ namespace ExpressionEvaluator
 
                 return Expression.Constant(val, ntype);
             }
-            throw new InvalidLiteralException(token);
+            throw new ExpressionParseException(token);
         }
 
 

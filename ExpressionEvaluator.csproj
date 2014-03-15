@@ -99,7 +99,7 @@
     <Compile Include="Tokens\Token.cs" />
     <Compile Include="TypeConversion.cs" />
     <Compile Include="TypeRegistry.cs" />
-    <Compile Include="UnknownIdentifierException.cs" />
+    <Compile Include="ExpressionParseException.cs" />
     <Compile Include="UnknownMethodException.cs" />
   </ItemGroup>
   <ItemGroup>

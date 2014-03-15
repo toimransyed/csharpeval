@@ -110,6 +110,7 @@ namespace Tests
     public class MyClass
     {
         public int X { get; set; }
+        public List<int> Y { get; set; }
         public Func<bool> Value { get; set; }
         public void Foo()
         {
@@ -138,19 +139,19 @@ namespace Tests
         static void Main(string[] args)
         {
             var registry = new TypeRegistry();
-    
+
             object obj = new objHolder() { result = true };
 
             registry.RegisterSymbol("obj", obj);
             registry.RegisterDefaultTypes();
-        
+
             var cc = new CompiledExpression() { StringToParse = "Convert.ToBoolean(obj.result)==true", TypeRegistry = registry };
             var result = cc.Eval();
 
             var x = new List<String>() { "Hello", "There", "World" };
             dynamic scope = new ExpandoObject();
             scope.x = x;
-            var data = new MyClass { Value = () => false };
+            var data = new MyClass { Value = () => false, Y = new List<int>() { 1, 2, 3, 4, 4, 5, 6, 4, 2, 3 } };
             var item = new MyClass { Value = () => true };
             scope.data = data;
             scope.item = item;
@@ -189,6 +190,16 @@ namespace Tests
             f1(data);
             Console.WriteLine(data.X);
 
+            var tr = new TypeRegistry();
+            tr.RegisterType("Enumerable", typeof(Enumerable));
+
+            //var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where(Y, (y) => y == 4)", TypeRegistry = tr };
+            //var f9 = c9.ScopeCompile<MyClass>();
+
+            //Console.WriteLine(data.X);
+            //f9(data);
+//            Console.WriteLine(data.X);
+
 
             var qq = (25.82).ToString("0.00", new CultureInfo("fr-FR")) + "px";
             var test = "(25.82).ToString('0.00') + 'px'";
@@ -204,9 +215,13 @@ namespace Tests
 
             scope.c = new c();
 
-            var c3 = new CompiledExpression() { StringToParse = "c.sum(1,2,3,4,5,6,7,8)" };
+            var c3 = new CompiledExpression() { StringToParse = "temp = c.sum(1,2,3,4,5,6,7,8)" };
             var f3 = c3.ScopeCompile();
             var x3 = f3(scope);
+
+            //var c3 = new CompiledExpression() { StringToParse = "c.sum(1,2,3,4,5,6,7,8)" };
+            //var f3 = c3.ScopeCompile();
+            //var x3 = f3(scope);
 
             var c4 = new CompiledExpression() { StringToParse = "c.sum(1,2)" };
             var f4 = c4.ScopeCompile();

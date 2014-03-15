@@ -136,10 +136,20 @@ public primary_expression returns [Expression value]
 		primary_expression_start 
 		{ 
 			$value = $primary_expression_start.value; 
-			if( $value == null ){
-				$value = Scope;
-				input.Rewind(savepoint);
-				fakedot = true;
+	
+			// Expression evaluator customization:		
+			if($value == null){
+				if(Scope != null)
+				{
+					// if initial identifier not found, assume Scope variable
+					$value = Scope;
+					input.Rewind(savepoint);
+					fakedot = true;
+				}
+				else
+				{
+					throw new ExpressionParseException("Unknown Identifier '\"" + $primary_expression_start.text + "\"");
+				}
 			}
 		}  
 		(primary_expression_part
@@ -234,7 +244,7 @@ public argument_list returns [List<Expression> values]
 {
 	$values = new List<Expression>();
 }: 
-	first=argument { $values.Add($first.value); } (',' suceeding=argument { $values.Add($first.value); })*;
+	first=argument { $values.Add($first.value); } (',' suceeding=argument { $values.Add($suceeding.value); })*;
 
 // 4.0
 public argument returns [Expression value]:
@@ -443,11 +453,14 @@ public pointer_type:
 ///////////////////////////////////////////////////////
 //    Statement Section
 ///////////////////////////////////////////////////////
-public block:
-    ';'
-    | '{'   statement_list?   '}';
-public statement_list:
-    statement+ ;
+public block returns [Expression value]:
+    ';' { $value = Expression.Block(); }
+    | '{'   statement_list?   '}' { $value = Expression.Block($statement_list.value.ToArray()); };
+public statement_list returns [List<Expression> value]
+@init{
+	$value = new List<Expression>();
+}:
+    (statement { value.Add($statement.value); })+ ;
     
 ///////////////////////////////////////////////////////
 //    Expression Section
@@ -465,7 +478,7 @@ public expression_list returns [List<Expression> values]
     first=expression { $values.Add($first.value); }  (',' succeeding=expression { $values.Add($succeeding.value); })* ;
 
 public assignment returns [Expression value]:
-    unary_expression   assignment_operator   expression ;
+    unary_expression   assignment_operator   expression { $value = ExpressionHelper.Assign($unary_expression.value, $expression.value); } ;
 public unary_expression returns [Expression value]: 
     //('(' arguments ')' ('[' | '.' | '(')) => primary_or_array_creation_expression
     (cast_expression) => cast_expression { $value = $cast_expression.value; }
@@ -653,16 +666,24 @@ public conditional_expression returns [Expression value]:
 //    lambda Section
 ///////////////////////////////////////////////////////
 public lambda_expression returns [Expression value]:
-    anonymous_function_signature   '=>'   anonymous_function_body { $value = Expression.Lambda($anonymous_function_body.value, null); };
-public anonymous_function_signature:
+    anonymous_function_signature { ParameterList.Add($anonymous_function_signature.value); }  
+	'=>'   anonymous_function_body 
+	{ 
+		$value = Expression.Lambda($anonymous_function_body.value, $anonymous_function_signature.value.ToArray()); 
+		ParameterList.Remove($anonymous_function_signature.value); 
+	};
+public anonymous_function_signature returns [List<ParameterExpression> value]:
     '('    (explicit_anonymous_function_parameter_list
-        | implicit_anonymous_function_parameter_list)?    ')'
-    | implicit_anonymous_function_parameter_list
+        | implicit_anonymous_function_parameter_list { $value = $implicit_anonymous_function_parameter_list.value; })?    ')'
+    | implicit_anonymous_function_parameter_list { $value = $implicit_anonymous_function_parameter_list.value; }
     ;
-public implicit_anonymous_function_parameter_list:
-    implicit_anonymous_function_parameter   (','   implicit_anonymous_function_parameter)* ;
-public implicit_anonymous_function_parameter:
-    identifier;
+public implicit_anonymous_function_parameter_list returns [List<ParameterExpression> value]
+@init{
+	$value = new List<ParameterExpression>();
+}:
+    first=implicit_anonymous_function_parameter  { $value.Add($first.value); } (','  succeeding=implicit_anonymous_function_parameter { $value.Add($succeeding.value); } )* ;
+public implicit_anonymous_function_parameter returns [ParameterExpression value]:
+    identifier { $value = Expression.Parameter(typeof(object), $identifier.text ); };
 public anonymous_function_body returns [Expression value]:
     expression { $value = $expression.value; }
     | block ;
@@ -710,8 +731,8 @@ public group_clause:
     'group'   expression   'by'   expression ;
 public where_clause:
     'where'   boolean_expression ;
-public boolean_expression:
-    expression;
+public boolean_expression returns [Expression value]:
+    expression { $value = $expression.value; };
 
 ///////////////////////////////////////////////////////
 // B.2.13 Attributes
@@ -1071,25 +1092,25 @@ public invocation_part:
 
 ///////////////////////////////////////////////////////
 
-public statement:
-    (declaration_statement) => declaration_statement
+public statement returns [Expression value]:
+    (declaration_statement) => declaration_statement { $value = $declaration_statement.value; }
     | (identifier   ':') => labeled_statement
-    | embedded_statement 
+    | embedded_statement { $value = $embedded_statement.value; }
     ;
-public embedded_statement:
-    block
-    | selection_statement    // if, switch
-    | iteration_statement    // while, do, for, foreach
-    | jump_statement        // break, continue, goto, return, throw
-    | try_statement
+public embedded_statement returns [Expression value]:
+    block { $value = $block.value; } 
+    | selection_statement { $value = $selection_statement.value; }    // if, switch
+    | iteration_statement { $value = $iteration_statement.value; }   // while, do, for, foreach
+    | jump_statement         // break, continue, goto, return, throw
+    | try_statement 
     | checked_statement
-    | unchecked_statement
-    | lock_statement
-    | using_statement 
-    | yield_statement 
-    | unsafe_statement
-    | fixed_statement
-    | expression_statement    // expression!
+    | unchecked_statement 
+    | lock_statement 
+    | using_statement  
+    | yield_statement  
+    | unsafe_statement 
+    | fixed_statement 
+    | expression_statement { $value = $expression_statement.value; }    // expression!
     ;
 public fixed_statement:
     'fixed'   '('   pointer_type fixed_pointer_declarators   ')'   embedded_statement ;
@@ -1104,46 +1125,55 @@ public unsafe_statement:
     'unsafe'   block;
 public labeled_statement:
     identifier   ':'   statement ;
-public declaration_statement:
-    (local_variable_declaration 
-    | local_constant_declaration) ';' ;
-public local_variable_declaration:
+public declaration_statement returns [Expression value]:
+    (local_variable_declaration { $value = $local_variable_declaration.value; } 
+    | local_constant_declaration { $value = $local_constant_declaration.value; }) ';' ;
+public local_variable_declaration returns [Expression value]:
     local_variable_type   local_variable_declarators ;
 public local_variable_type:
     ('var') => 'var'
     | ('dynamic') => 'dynamic'
     | type ;
-public local_variable_declarators:
+public local_variable_declarators returns [List<Expression> value] @init { $value =  new List<Expression>(); }:
     local_variable_declarator (',' local_variable_declarator)* ;
-public local_variable_declarator:
+public local_variable_declarator returns [Expression value]:
     identifier ('='   local_variable_initializer)? ; 
-public local_variable_initializer:
+public local_variable_initializer returns [Expression value]:
     expression
     | array_initializer 
     | stackalloc_initializer;
 public stackalloc_initializer:
     'stackalloc'   unmanaged_type   '['   expression   ']' ;
-public local_constant_declaration:
+public local_constant_declaration returns [Expression value]:
     'const'   type   constant_declarators ;
-public expression_statement:
-    expression   ';' ;
+public expression_statement returns [Expression value]:
+    expression   ';' { $value = $expression.value; } ;
 
 // TODO: should be assignment, call, increment, decrement, and new object expressions
-public statement_expression:
-    expression
+public statement_expression returns [Expression value]:
+    expression { } 
     ;
-public selection_statement:
-    if_statement
-    | switch_statement ;
-public if_statement:
+public selection_statement returns [Expression value]:
+    if_statement { $value = $if_statement.value; }
+    | switch_statement  { $value = $switch_statement.value; } ;
+public if_statement returns [Expression value]:
     // else goes with closest if
-    'if'   '('   boolean_expression   ')'   embedded_statement (('else') => else_statement)?
-    ;
-public else_statement:
-    'else'   embedded_statement    ;
-public switch_statement:
-    'switch'   '('   expression   ')'   switch_block ;
-public switch_block:
+    'if'   '('   boolean_expression   ')'  embedded_statement (('else') => else_statement )?
+	 {
+		if($else_statement.value == null)
+		{
+			$value = Expression.IfThenElse($boolean_expression.value, $embedded_statement.value, $else_statement.value); 
+		}else
+		{
+			$value = Expression.IfThenElse($boolean_expression.value, $embedded_statement.value, $else_statement.value); 
+		}
+	 }
+     ; 
+public else_statement returns [Expression value]:
+    'else'   embedded_statement { $value = $embedded_statement.value; };
+public switch_statement returns [Expression value]:
+    'switch'   '('   expression   ')'   switch_block  { $value = Expression.Switch($expression.value, $switch_block.value.ToArray()); };
+public switch_block returns [List<SwitchCase> value]:
     '{'   switch_sections?   '}' ;
 public switch_sections:
     switch_section+ ;
@@ -1154,28 +1184,28 @@ public switch_labels:
 public switch_label:
     ('case'   constant_expression   ':')
     | ('default'   ':') ;
-public iteration_statement:
+public iteration_statement returns [Expression value]:
     while_statement
     | do_statement
-    | for_statement
-    | foreach_statement ;
+    | for_statement { $value = $for_statement.value; }
+    | foreach_statement { $value = $foreach_statement.value; };
 public while_statement:
     'while'   '('   boolean_expression   ')'   embedded_statement ;
 public do_statement:
     'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' ;
-public for_statement:
+public for_statement returns [Expression value]:
     'for'   '('   for_initializer?   ';'   for_condition?   ';'   for_iterator?   ')'   embedded_statement ;
 public for_initializer:
     (local_variable_declaration) => local_variable_declaration
     | statement_expression_list 
     ;
-public for_condition:
+public for_condition returns [Expression value]:
     boolean_expression ;
 public for_iterator:
     statement_expression_list ;
 public statement_expression_list:
     statement_expression (',' statement_expression)* ;
-public foreach_statement:
+public foreach_statement returns [Expression value]:
     'foreach'   '('   local_variable_type   identifier   'in'   expression   ')'   embedded_statement ;
 public jump_statement:
     break_statement
