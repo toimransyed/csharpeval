@@ -50,9 +50,7 @@ For more details see [Updates]
 
 Expression Evaluator is 100% free, but if you would like to support the project in any way please do so.
 
-![Donate](https://www.paypalobjects.com/webstatic/en_US/btn/btn_donate_cc_147x47.png)
-
-[Donate](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=rupert.avery@gmail.com&lc=PH&item_name=Expression Evaluator&currency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
+[![Donate](https://www.paypalobjects.com/webstatic/en_US/btn/btn_donate_cc_147x47.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=rupert.avery@gmail.com&lc=PH&item_name=Expression Evaluator&currency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 
 # Disclaimer
 
