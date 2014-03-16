@@ -54,6 +54,6 @@ Expression Evaluator is 100% free, but if you would like to support the project 
 
 [Donate](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=rupert.avery@gmail.com&lc=PH&item_name=Expression Evaluator&currency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 
-!!! Disclaimer
+# Disclaimer
 
 This is *not* a fully C#-compliant compiler, and as such features may be missing and there may be bugs or discrepancies in how the parser and compiler work.  If you wish to use this library in production code do so at your own risk.
