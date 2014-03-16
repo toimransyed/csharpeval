@@ -1,8 +1,12 @@
+# Notice
+
+This is the **master** branch. It contains the original hand-written parser. It will eventually be deprecated in favor of the **AntlrParser** branch.
+
 # Introduction
 
 C# does not include a built-in method to evaluate a string during runtime, like Javascript's eval() or VBScript's Eval().
 
-ExpressionEvaluator is a lightweight, simple and free library capable of parsing and compiling simple to medium complexity C# expressions. It features a Antlr-based tokenizer and parser and generates a LINQ Expression tree which is then compiled into a function.
+ExpressionEvaluator is a lightweight, simple and free library capable of parsing and compiling simple to medium complexity C# expressions. It features a hand-written tokenizer and parser and generates a LINQ Expression tree which is then compiled into a function.
 
 Applications for an expression parser and compiler are usually in the form of embedded code or user-defined expressions that need to be executed against runtime objects. 
 
