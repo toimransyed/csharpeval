@@ -141,10 +141,11 @@ public primary_expression returns [Expression value]
 			if($value == null){
 				if(Scope != null)
 				{
-					// if initial identifier not found, assume Scope variable
 					$value = Scope;
-					input.Rewind(savepoint);
-					fakedot = true;
+
+					// if initial identifier not found, assume Scope variable
+					 input.Rewind(savepoint);
+					 fakedot = true;
 				}
 				else
 				{
@@ -181,7 +182,7 @@ public primary_expression returns [Expression value]
 					// $value = GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values);
 				}
 			}
-			fakedot = false;
+			 fakedot = false;
 		})* 
     | 'new' (   (object_creation_expression   ('.'|'->'|'[')) => 
                     object_creation_expression   (primary_expression_part)+         // new Foo(arg, arg).Member
@@ -686,7 +687,7 @@ public implicit_anonymous_function_parameter returns [ParameterExpression value]
     identifier { $value = Expression.Parameter(typeof(object), $identifier.text ); };
 public anonymous_function_body returns [Expression value]:
     expression { $value = $expression.value; }
-    | block ;
+    | block { $value = $block.value; };
 
 ///////////////////////////////////////////////////////
 //    LINQ Section
@@ -731,6 +732,7 @@ public group_clause:
     'group'   expression   'by'   expression ;
 public where_clause:
     'where'   boolean_expression ;
+
 public boolean_expression returns [Expression value]:
     expression { $value = $expression.value; };
 
@@ -1330,7 +1332,8 @@ STRINGLITERAL
     '"' (EscapeSequence | ~('"' | '\\'))* '"'
 	| '\'' (EscapeSequence | ~('\'' | '\\'))* '\'' ;  // ExpressionEvaluator in-string strings
 Verbatim_string_literal:
-    '@'   '"' Verbatim_string_literal_character* '"' ;
+    '@'  '"' Verbatim_string_literal_character* '"' 
+	| '@' '\'' Verbatim_string_literal_character* '\'' ;  // ExpressionEvaluator in-string strings
 fragment
 Verbatim_string_literal_character:
     '"' '"' | ~('"') ;

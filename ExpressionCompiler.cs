@@ -54,6 +54,9 @@ namespace ExpressionEvaluator
             return Expression.Block(source, Expression.Constant(null));
         }
 
-
+        public override string ToString()
+        {
+            return Expression.ToString();
+        }
     }
 }

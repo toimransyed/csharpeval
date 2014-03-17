@@ -22,15 +22,19 @@ namespace ExpressionEvaluator
         private Expression GetIdentifier(string identifier)
         {
             ParameterExpression parameter;
+
             if (ParameterList.TryGetValue(identifier, out parameter))
             {
                 return parameter;
             }
+
             object result = null;
+            
             if (TypeRegistry.TryGetValue(identifier, out result))
             {
                 return Expression.Constant(result);
             }
+            
             return null;
 
             // throw new UnknownIdentifierException(identifier);
@@ -83,6 +87,7 @@ namespace ExpressionEvaluator
             foreach (var parameterExpression in list)
             {
                 ParameterExpression p;
+
                 if (ParameterLookup.TryGetValue(parameterExpression.Name, out p))
                 {
                     _parameters.Remove(parameterExpression);
@@ -91,6 +96,7 @@ namespace ExpressionEvaluator
                 {
                     throw new ExpressionParseException("Parameter not found while removing???");
                 }
+
             }
         }
 
