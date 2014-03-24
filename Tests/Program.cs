@@ -135,7 +135,7 @@ namespace Tests
 
     public class ValueHolder
     {
-        public object Value { get; set; }
+        public string Value { get; set; }
     }
 
     class Program
@@ -143,15 +143,15 @@ namespace Tests
 
         static void Main(string[] args)
         {
-            var field = new ValueHolder();
-            var query = new ValueHolder();
+            var field = new ValueHolder() { Value = "405" };
+            var query = new ValueHolder() { Value = "405" };
+            var ra11 = Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value);
             TypeRegistry registry1 = new TypeRegistry();
             registry1.RegisterSymbol("field", field);
             registry1.RegisterSymbol("query", query);
             registry1.RegisterDefaultTypes();
             var c11 = new CompiledExpression() { StringToParse = "Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value)", TypeRegistry = registry1 };
             var x11 = c11.Compile();
-            var ra11 = Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value);
             var r11 = x11();
 
             var registry = new TypeRegistry();

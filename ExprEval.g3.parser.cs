@@ -16,6 +16,19 @@ namespace ExpressionEvaluator
         public override void ReportError(RecognitionException e)
         {
             base.ReportError(e);
+            string message;
+            if (e.GetType() == typeof (MismatchedTokenException))
+            {
+                var ex = (MismatchedTokenException) e;
+                message = string.Format("Mismatched token '{0}', expected {1}", e.Token.Text, ex.Expecting);
+            }
+            else
+            {
+                message = string.Format("Error parsing token '{0}", e.Token.Text);
+            }
+            
+            throw new ExpressionParseException(message, input);
+
             Console.WriteLine("Error in parser at line " + e.Line + ":" + e.CharPositionInLine);
         }
 
