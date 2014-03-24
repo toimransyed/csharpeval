@@ -133,11 +133,27 @@ namespace Tests
         public bool result { get; set; }
     }
 
+    public class ValueHolder
+    {
+        public object Value { get; set; }
+    }
+
     class Program
     {
 
         static void Main(string[] args)
         {
+            var field = new ValueHolder();
+            var query = new ValueHolder();
+            TypeRegistry registry1 = new TypeRegistry();
+            registry1.RegisterSymbol("field", field);
+            registry1.RegisterSymbol("query", query);
+            registry1.RegisterDefaultTypes();
+            var c11 = new CompiledExpression() { StringToParse = "Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value)", TypeRegistry = registry1 };
+            var x11 = c11.Compile();
+            var ra11 = Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value);
+            var r11 = x11();
+
             var registry = new TypeRegistry();
             var cy = new CompiledExpression() { StringToParse = "int.Parse(\"1000\")", TypeRegistry = registry };
             var resulty = cy.Eval();
