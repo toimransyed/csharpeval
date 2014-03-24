@@ -107,7 +107,7 @@ namespace ExpressionEvaluator
                     new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
                     );
 
-                return Expression.Dynamic(binder, typeof(object), instance,re);
+                return Expression.Dynamic(binder, typeof(object), instance, re);
 
             }
             return Expression.Assign(le, re);
@@ -185,7 +185,7 @@ namespace ExpressionEvaluator
             var isDynamic = false;
             var isRuntimeType = false;
 
-            if (le.Type.Name == "RuntimeType")
+            if (typeof(Type).IsAssignableFrom(le.Type))
             {
                 isRuntimeType = true;
                 type = ((Type)((ConstantExpression)le).Value);
@@ -336,7 +336,7 @@ namespace ExpressionEvaluator
                 }
             }
 
-            throw new UnknownMethodException();
+            return null;
         }
 
         public static Expression ParseRealLiteral(string token)
@@ -483,7 +483,7 @@ namespace ExpressionEvaluator
 
                 return Expression.Constant(val, ntype);
             }
-            throw new ExpressionParseException(token);
+            return null;
         }
 
 

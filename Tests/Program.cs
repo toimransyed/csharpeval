@@ -139,6 +139,8 @@ namespace Tests
         static void Main(string[] args)
         {
             var registry = new TypeRegistry();
+            var cy = new CompiledExpression() { StringToParse = "int.Parse(\"1000\")", TypeRegistry = registry };
+            var resulty = cy.Eval();
 
             object obj = new objHolder() { result = true };
 

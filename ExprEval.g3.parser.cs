@@ -70,7 +70,7 @@ namespace ExpressionEvaluator
                 }
                 else
                 {
-                    throw new ExpressionParseException("Parameter conflicts with existing parameter");
+                    throw new Exception(string.Format("Parameter \"{0}\" conflicts with an existing parameter", parameterExpression.Name));
                 }
             }
         }
@@ -92,11 +92,6 @@ namespace ExpressionEvaluator
                 {
                     _parameters.Remove(parameterExpression);
                 }
-                else
-                {
-                    throw new ExpressionParseException("Parameter not found while removing???");
-                }
-
             }
         }
 

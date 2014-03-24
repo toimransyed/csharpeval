@@ -33,7 +33,6 @@ namespace ExpressionEvaluator
             if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
             var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
             Expression = parser.expression();
-
             return Expression;
         }
 

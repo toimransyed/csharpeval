@@ -126,15 +126,22 @@ namespace ExpressionEvaluator.Tests
             Assert.IsTrue(Convert.ToDouble(ret) == 3.5D);
         }
 
+        public class Container
+        {
+            public int x { get; set; }
+        }
 
         [TestMethod]
         public void Assignment()
         {
-            var str = "x = 1";
-            var c = new CompiledExpression(str);
+            var str = "c.x = 1";
+            var c = new CompiledExpression(str) { TypeRegistry = new TypeRegistry() };
+            var cont = new Container();
+            c.TypeRegistry.RegisterSymbol("c", cont);
+            c.TypeRegistry.RegisterType("p", typeof(Math));
             var ret = c.Eval();
-            Assert.IsTrue(ret.GetType() == typeof(System.Double));
-            Assert.IsTrue(Convert.ToDouble(ret) == 3.5D);
+            Assert.AreEqual(ret, 1);
+            Assert.AreEqual(ret, cont.x);
         }
 
 

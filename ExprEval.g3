@@ -149,7 +149,7 @@ public primary_expression returns [Expression value]
 				}
 				else
 				{
-					throw new ExpressionParseException("Unknown Identifier '\"" + $primary_expression_start.text + "\"");
+					throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
 				}
 			}
 		}  
@@ -164,6 +164,10 @@ public primary_expression returns [Expression value]
 				else
 				{
                     $value = ExpressionHelper.GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value);
+					if($value==null)
+					{
+						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
+					}
                 }
 			}
 			else if($primary_expression_part.value.GetType() == typeof(BracketsToken))
@@ -175,6 +179,10 @@ public primary_expression returns [Expression value]
 				if(membername!=null)
 				{
 					$value = ExpressionHelper.GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values, IsCall);
+					if($value==null)
+					{
+						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", membername), input);
+					}
 					membername = null;
 				}
 				else
@@ -199,7 +207,7 @@ public primary_expression returns [Expression value]
     ;
 
 public primary_expression_start returns [Expression value]:
-    predefined_type            
+    predefined_type { var type = GetType($predefined_type.text); $value = Expression.Constant(type, typeof(Type)); }           
     | (identifier    generic_argument_list) => identifier   generic_argument_list
 //    | identifier ('::'   identifier)?
     | identifier { $value = $identifier.value; }
@@ -494,7 +502,7 @@ public unary_expression returns [Expression value]:
     | addressof_expression 
     ;
 public cast_expression returns [Expression value]:
-    '('   type   ')'   unary_expression { $value = Expression.Convert($unary_expression.value, Type.GetType($type.text)); } ;
+    '('   type   ')'   unary_expression { $value = Expression.Convert($unary_expression.value, GetType($type.text)); } ;
 public assignment_operator returns [Expression value]:
     '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>' '>=' ;
 public pre_increment_expression returns [Expression value]: 
