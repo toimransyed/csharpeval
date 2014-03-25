@@ -241,104 +241,266 @@ namespace ExpressionEvaluator.Operators
             return false;
         }
 
+        // 7.5.3.1 
+//        A function member is said to be an applicable function member with respect to an argument list A when all of the following are true:
+//•	Each argument in A corresponds to a parameter in the function member declaration as described in §7.5.1.1, and any parameter to which no argument corresponds is an optional parameter.
+//•	For each argument in A, the parameter passing mode of the argument (i.e., value, ref, or out) is identical to the parameter passing mode of the corresponding parameter, and
+//o	for a value parameter or a parameter array, an implicit conversion (§6.1) exists from the argument to the type of the corresponding parameter, or
+//o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter. After all, a ref or out parameter is an alias for the argument passed.
+//For a function member that includes a parameter array, if the function member is applicable by the above rules, it is said to be applicable in its normal form. If a function member that includes a parameter array is not applicable in its normal form, the function member may instead be applicable in its expanded form:
+//•	The expanded form is constructed by replacing the parameter array in the function member declaration with zero or more value parameters of the element type of the parameter array such that the number of arguments in the argument list A matches the total number of parameters. If A has fewer arguments than the number of fixed parameters in the function member declaration, the expanded form of the function member cannot be constructed and is thus not applicable.
+//•	Otherwise, the expanded form is applicable if for each argument in A the parameter passing mode of the argument is identical to the parameter passing mode of the corresponding parameter, and
+//o	for a fixed value parameter or a value parameter created by the expansion, an implicit conversion (§6.1) exists from the type of the argument to the type of the corresponding parameter, or
+//o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter.
 
-        public static List<MemberInfo> GetApplicableMembers(Type type, string membername, List<Expression> args)
+        public static bool IsApplicableFunctionMember(MethodInfo F, List<Expression> args)
         {
-            var results = GetCandidateMembers(type, membername);
+            bool isMatch = true;
+            //paramMods = new List<CallArgMod>();
+            int argCount = 0;
+            foreach (ParameterInfo pInfo in F.GetParameters())
+            {
+                bool haveArg = argCount < args.Count;
+
+                if (pInfo.IsOut || pInfo.ParameterType.IsByRef)
+                {
+                    if (!haveArg)
+                    {
+                        isMatch = false;
+                    }
+                    //else if (pInfo.IsOut)
+                    //{
+                    //    if (mrSettings.Args[argCount].CallMod != CallArgMod.OUT)
+                    //    {
+                    //        isMatch = false;
+                    //    }
+                    //}
+                    //else if (pInfo.ParameterType.IsByRef)
+                    //{
+                    //    if (mrSettings.Args[argCount].CallMod != CallArgMod.REF)
+                    //    {
+                    //        isMatch = false;
+                    //    }
+                    //}
+
+                    // Step 4 (technically)
+                    // Check types if either are a ref type. Must match exactly
+                    String argTypeStr = args[argCount].Type.FullName;
+                    Type paramType = F.GetParameters()[argCount].ParameterType;
+                    String paramTypeStr = paramType.ToString().Substring(0, paramType.ToString().Length - 1);
+
+                    if (argTypeStr != paramTypeStr)
+                    {
+                        isMatch = false;
+                    }
+
+                }
+                else
+                {
+                    if (pInfo.IsOptional)
+                    {
+                        // If an argument for this parameter position was specified, check its type
+                        if (haveArg && !CanConvertType(((ConstantExpression)args[argCount]).Value, false, args[argCount].Type, pInfo.ParameterType))
+                        {
+                            isMatch = false;
+                        }
+                    }
+                    else if (pInfo.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0)
+                    { // Check ParamArray arguments
+                        // TODO: set OnlyAppInExpForm here
+                        for (int j = pInfo.Position; j < args.Count; j++)
+                        {
+                            if (!CanConvertType(null, false, args[j].Type, pInfo.ParameterType.GetElementType()))
+                            {
+                                isMatch = false;
+                            }
+                            argCount++;
+                        }
+                        break;
+                    }
+                    else
+                    { // Checking non-optional, non-ParamArray arguments
+                        if (!haveArg || !CanConvertType(null, false, args[argCount].Type, pInfo.ParameterType))
+                        {
+                            isMatch = false;
+                        }
+                    }
+                }
+
+                if (!isMatch)
+                {
+                    break;
+                }
+
+                argCount++;
+            }
+
+            if (isMatch && argCount < args.Count)
+                isMatch = false;
+
+            return isMatch;
+        }
+
+        //// 6.1.1
+        //public static bool HasIdentityConversion(Type T1, Type T2)
+        //{
+            
+        //}
+
+        //7.5.3.5 Better conversion target
+        public static bool IsBetterConversionTarget(Type T1, Type T2)
+        {
+            //            •	An implicit conversion from T1 to T2 exists, and no implicit conversion from T2 to T1 exists
+            //•	T1 is a signed integral type and T2 is an unsigned integral type. Specifically:
+            //o	T1 is sbyte and T2 is byte, ushort, uint, or ulong
+            //o	T1 is short and T2 is ushort, uint, or ulong
+            //o	T1 is int and T2 is uint, or ulong
+            //o	T1 is long and T2 is ulong
+
+        }
+
+        public static bool BetterConversion(Expression E, Type T1, Type T2)
+        {
+            // Given an implicit conversion C1 that converts from an expression E to a type T1, and an implicit conversion C2 
+            // that converts from an expression E to a type T2, C1 is a better conversion than C2 if at least one of the following holds:
+            var S = E.Type;
+            //•	E has a type S and an identity conversion exists from S to T1 but not from S to T2
+            if (S == T1 && S != T2) return true;
+            //•	E is not an anonymous function and T1 is a better conversion target than T2 (§7.5.3.5)
+            if (E.NodeType != ExpressionType.Lambda)
+            {
+                return IsBetterConversionTarget(T1, T2);
+            }
+            else
+            {
+                //•	E is an anonymous function, T1 is either a delegate type D1 or an expression tree type Expression<D1>, T2 is either a delegate type D2 or an expression tree type Expression<D2> and one of the following holds:
+                //o	D1 is a better conversion target than D2
+                //o	D1 and D2 have identical parameter lists, and one of the following holds:
+                //•	D1 has a return type Y1, and D2 has a return type Y2, an inferred return type X exists for E in the context of that parameter list (§7.5.2.12), and the conversion from X to Y1 is better than the conversion from X to Y2
+                //•	E is async, D1 has a return type Task<Y1>, and D2 has a return type Task<Y2>, an inferred return type Task<X> exists for E in the context of that parameter list (§7.5.2.12), and the conversion from X to Y1 is better than the conversion from X to Y2
+                //•	D1 has a return type Y, and D2 is void returning
+            }
+            return false;
+        }
+
+        public static MemberInfo GetBetterFunctionMember(MethodInfo MP, MethodInfo MQ, List<Expression> A)
+        {
+            //        For the purposes of determining the better function member, a stripped-down argument list A is constructed containing just the argument expressions themselves in the order they appear in the original argument list.
+
+            //Parameter lists for each of the candidate function members are constructed in the following way: 
+            //•	The expanded form is used if the function member was applicable only in the expanded form.
+            //•	Optional parameters with no corresponding arguments are removed from the parameter list
+
+            //•	The parameters are reordered so that they occur at the same position as the corresponding argument in the argument list.
+            int implicitPoints = 0, typePoints = 0;
+
+            //Given an argument list A with a set of argument expressions { E1, E2, ..., EN } and two applicable function members MP and MQ with parameter types { P1, P2, ..., PN } and { Q1, Q2, ..., QN }, MP is defined to be a better function member than MQ if
+            var PN = MP.GetParameters();
+            var QN = MP.GetParameters();
+
+            bool firstCollorary = true;
+            bool secondCollorary = false;
+
+            //•	for each argument, the implicit conversion from EX to QX is not better than the implicit conversion from EX to PX, and
+            //•	for at least one argument, the conversion from EX to PX is better than the conversion from EX to QX.
+            for (int i = 0; i < A.Count; i++)
+            {
+                firstCollorary = firstCollorary & !BetterConversion(A[i], QN[i].ParameterType, PN[i].ParameterType);
+                secondCollorary = secondCollorary | BetterConversion(A[i], PN[i].ParameterType, QN[i].ParameterType);
+            }
+
+            if (firstCollorary && secondCollorary) return MP;
+
+            //When performing this evaluation, if MP or MQ is applicable in its expanded form, then PX or QX refers to a parameter in the expanded form of the parameter list.
+            //In case the parameter type sequences {P1, P2, …, PN} and {Q1, Q2, …, QN} are equivalent (i.e. each Pi has an identity conversion to the corresponding Qi), the following tie-breaking rules are applied, in order, to determine the better function member. 
+            //•	If MP is a non-generic method and MQ is a generic method, then MP is better than MQ.
+            //•	Otherwise, if MP is applicable in its normal form and MQ has a params array and is applicable only in its expanded form, then MP is better than MQ.
+            //•	Otherwise, if MP has more declared parameters than MQ, then MP is better than MQ. This can occur if both methods have params arrays and are applicable only in their expanded forms.
+            //•	Otherwise if all parameters of MP have a corresponding argument whereas default arguments need to be substituted for at least one optional parameter in MQ then MP is better than MQ. 
+            //•	Otherwise, if MP has more specific parameter types than MQ, then MP is better than MQ. Let {R1, R2, …, RN} and {S1, S2, …, SN} represent the uninstantiated and unexpanded parameter types of MP and MQ. MP’s parameter types are more specific than MQ’s if, for each parameter, RX is not less specific than SX, and, for at least one parameter, RX is more specific than SX:
+            //o	A type parameter is less specific than a non-type parameter.
+            //o	Recursively, a constructed type is more specific than another constructed type (with the same number of type arguments) if at least one type argument is more specific and no type argument is less specific than the corresponding type argument in the other.
+            //o	An array type is more specific than another array type (with the same number of dimensions) if the element type of the first is more specific than the element type of the second.
+            //•	Otherwise if one member is a non-lifted operator and  the other is a lifted operator, the non-lifted one is better.
+            //•	Otherwise, neither function member is better.
+
+        }
+
+        // 7.5.3
+        public static MemberInfo OverloadResolution(List<MemberInfo> candidates, List<Expression> A)
+        {
+            //            7.5.3 Overload resolution
+            //•	Given the set of applicable candidate function members, the best function member in that set is located. 
+            // If the set contains only one function member, then that function member is the best function member. 
+            if (candidates.Count == 1) return candidates[0];
+
+            // Otherwise, the best function member is the one function member that is better than all other function members with respect to the given argument list, 
+            // provided that each function member is compared to all other function members using the rules in §7.5.3.2. 
+            // If there is not exactly one function member that is better than all other function members, then the function member invocation is ambiguous and a binding-time error occurs.
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                for (int j = i + 1; j < candidates.Count; j++)
+                {
+                    GetBetterFunctionMember((MethodInfo) candidates[i], (MethodInfo) candidates[j], A);
+                }
+            }
+
+        }
+
+        // 7.6.5.1
+        public static List<MemberInfo> GetApplicableMembers(Type type, TypeOrGeneric M, List<Expression> A)
+        {
+            var candidates = GetCandidateMembers(type, M.Identifier);
 
             // paramater matching && ref C# lang spec section 7.5.1.1
             var appMembers = new List<MemberInfo>();
 
             // match each param with an arg. 
             //List<CallArgMod> paramMods;
-            foreach (var methodInfo in results)
+            foreach (var F in candidates)
             {
-                bool isMatch = true;
-                //paramMods = new List<CallArgMod>();
-                int argCount = 0;
-                foreach (ParameterInfo pInfo in methodInfo.GetParameters())
+                if (M.TypeArgs == null || !M.TypeArgs.Any())
                 {
-                    bool haveArg = argCount < args.Count;
-
-                    if (pInfo.IsOut || pInfo.ParameterType.IsByRef)
+                    if (!F.IsGenericMethod)
                     {
-                        if (!haveArg)
-                        {
-                            isMatch = false;
-                        }
-                        //else if (pInfo.IsOut)
-                        //{
-                        //    if (mrSettings.Args[argCount].CallMod != CallArgMod.OUT)
-                        //    {
-                        //        isMatch = false;
-                        //    }
-                        //}
-                        //else if (pInfo.ParameterType.IsByRef)
-                        //{
-                        //    if (mrSettings.Args[argCount].CallMod != CallArgMod.REF)
-                        //    {
-                        //        isMatch = false;
-                        //    }
-                        //}
-
-                        // Step 4 (technically)
-                        // Check types if either are a ref type. Must match exactly
-                        String argTypeStr = args[argCount].Type.FullName;
-                        Type paramType = methodInfo.GetParameters()[argCount].ParameterType;
-                        String paramTypeStr = paramType.ToString().Substring(0, paramType.ToString().Length - 1);
-
-                        if (argTypeStr != paramTypeStr)
-                        {
-                            isMatch = false;
-                        }
-
+                        if(IsApplicableFunctionMember(F, A)) appMembers.Add(F);
                     }
-                    else
+                    else // (F.IsGenericMethod)
                     {
-                        if (pInfo.IsOptional)
-                        {
-                            // If an argument for this parameter position was specified, check its type
-                            if (haveArg && !CanConvertType(((ConstantExpression)args[argCount]).Value, false, args[argCount].Type, pInfo.ParameterType))
-                            {
-                                isMatch = false;
-                            }
-                        }
-                        else if (pInfo.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0)
-                        { // Check ParamArray arguments
-                            // TODO: set OnlyAppInExpForm here
-                            for (int j = pInfo.Position; j < args.Count; j++)
-                            {
-                                if (!CanConvertType(null, false, args[j].Type, pInfo.ParameterType.GetElementType()))
-                                {
-                                    isMatch = false;
-                                }
-                                argCount++;
-                            }
-                            break;
-                        }
-                        else
-                        { // Checking non-optional, non-ParamArray arguments
-                            if (!haveArg || !CanConvertType(null, false, args[argCount].Type, pInfo.ParameterType))
-                            {
-                                isMatch = false;
-                            }
-                        }
+                        //InferTypes(F, A);
+                        if (IsApplicableFunctionMember(F, A)) appMembers.Add(F);
                     }
-
-                    if (!isMatch)
-                    {
-                        break;
-                    }
-
-                    argCount++;
+                    
                 }
-
-                if (isMatch && argCount < args.Count)
-                    isMatch = false;
-
-                if (isMatch)
-                    appMembers.Add(methodInfo);
+                if (F.IsGenericMethod && M.TypeArgs !=null && M.TypeArgs.Any())
+                {
+                    if (IsApplicableFunctionMember(F, A)) appMembers.Add(F);
+                }
             }
+
+            // • The set of candidate methods is reduced to contain only methods from the most derived types: For each method C.F in the set, where C is the type in which the method F is declared, 
+            // all methods declared in a base type of C are removed from the set. Furthermore, if C is a class type other than object, all methods declared in an interface type are removed from the
+            // set. (This latter rule only has affect when the method group was the result of a member lookup on a type parameter having an effective base class other than object and a
+            // non-empty effective interface set.)
+            foreach (var F in appMembers.ToList())
+            {
+                var C = F.DeclaringType;
+                var baseTypeMethods =  C.BaseType.GetMethods();
+            }
+
+            //•	If the resulting set of candidate methods is empty, then further processing along the following steps are abandoned, and instead an attempt is made to 
+            //  process the invocation as an extension method invocation (§7.6.5.2). If this fails, then no applicable methods exist, and a binding-time error occurs. 
+            if (!appMembers.Any()) return appMembers;
+            
+//•	The best method of the set of candidate methods is identified using the overload resolution rules of §7.5.3. If a single best method cannot be identified, the method invocation is ambiguous, and a binding-time error occurs. When performing overload resolution, the parameters of a generic method are considered after substituting the type arguments (supplied or inferred) for the corresponding method type parameters.
+
+            //•	Final validation of the chosen best method is performed:
+//o	The method is validated in the context of the method group: If the best method is a static method, the method group must have resulted from a simple-name or a member-access through a type. If the best method is an instance method, the method group must have resulted from a simple-name, a member-access through a variable or value, or a base-access. If neither of these requirements is true, a binding-time error occurs.
+//o	If the best method is a generic method, the type arguments (supplied or inferred) are checked against the constraints (§4.4.4) declared on the generic method. If any type argument does not satisfy the corresponding constraint(s) on the type parameter, a binding-time error occurs.
+//Once a method has been selected and validated at binding-time by the above steps, the actual run-time invocation is processed according to the rules of function member invocation described in §7.5.4.
+//The intuitive effect of the resolution rules described above is as follows: To locate the particular method invoked by a method invocation, start with the type indicated by the method invocation and proceed up the inheritance chain until at least one applicable, accessible, non-override method declaration is found. Then perform type inference and overload resolution on the set of applicable, accessible, non-override methods declared in that type and invoke the method thus selected. If no method was found, try instead to process the invocation as an extension method invocation.
+
+
 
             return appMembers;
             //}

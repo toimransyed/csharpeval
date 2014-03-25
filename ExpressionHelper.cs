@@ -12,28 +12,6 @@ using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace ExpressionEvaluator
 {
-    public class TypeOrGeneric
-    {
-        public string Identifier { get; set; }
-        public List<Type> TypeArgs { get; set; }
-    }
-
-    public class TypeVariable
-    {
-        public TypeVariable()
-        {
-            Bounds = new List<Type>();
-            UpperBounds = new List<Type>();
-            LowerBounds = new List<Type>();
-        }
-
-        public bool IsFixed { get; set; }
-        public string Name { get; set; }
-        public List<Type> Bounds { get; set; }
-        public List<Type> UpperBounds { get; set; }
-        public List<Type> LowerBounds { get; set; }
-    }
-
     public class ExpressionHelper
     {
         private static readonly Type StringType = typeof(string);
@@ -318,7 +296,6 @@ namespace ExpressionEvaluator
 
             var membername = member.Identifier;
             if (typeof(Type).IsAssignableFrom(le.Type))
-
             {
                 isRuntimeType = true;
                 type = ((Type)((ConstantExpression)le).Value);
@@ -364,14 +341,14 @@ namespace ExpressionEvaluator
                 var mis = MethodResolution.GetApplicableMembers(type, membername, args);
                 var methodInfo = (MethodInfo)mis[0];
 
-                var returnTypeArgs = methodInfo.GetGenericArguments();
+                //var returnTypeArgs = methodInfo.GetGenericArguments();
 
-                Dictionary<string, Type> genericArgTypes = null;
+                //Dictionary<string, Type> genericArgTypes = null;
 
-                if (methodInfo.IsGenericMethod)
-                {
-                    genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
-                }
+                //if (methodInfo.IsGenericMethod)
+                //{
+                //    genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
+                //}
 
                 InferTypes(methodInfo, args);
 
@@ -385,93 +362,82 @@ namespace ExpressionEvaluator
                     {
                         var index = parameterInfo.Position;
 
-                        if (parameterInfo.ParameterType.IsGenericType)
-                        {
-                            if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
-                                genericArgTypes != null)
-                            {
-                                genericArgTypes[parameterInfo.Name] = args[index].Type;
+                        //if (parameterInfo.ParameterType.IsGenericType)
+                        //{
+                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
+                        //        genericArgTypes != null)
+                        //    {
+                        //        genericArgTypes[parameterInfo.Name] = args[index].Type;
 
-                                //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
-                                args[index] = Expression.Convert(args[index],
-                                                                 parameterInfos[index].ParameterType
-                                                                                      .GetGenericTypeDefinition()
-                                                                                      .MakeGenericType(args[index].Type));
-                            }
-                            if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericType &&
-                                genericArgTypes != null)
-                            {
+                        //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                        //        args[index] = Expression.Convert(args[index],
+                        //                                         parameterInfos[index].ParameterType
+                        //                                                              .GetGenericTypeDefinition()
+                        //                                                              .MakeGenericType(args[index].Type));
+                        //    }
+                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericType &&
+                        //        genericArgTypes != null)
+                        //    {
 
-                                foreach (var pInfoGenericArgType in parameterInfo.ParameterType.GetGenericArguments())
-                                {
-                                    if (!genericArgTypes.ContainsKey(pInfoGenericArgType.Name))
-                                    {
-                                        genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
-                                    }
-                                    else
-                                    {
-                                        if (genericArgTypes[pInfoGenericArgType.Name] == null)
-                                        {
-                                            genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+                        //        foreach (var pInfoGenericArgType in parameterInfo.ParameterType.GetGenericArguments())
+                        //        {
+                        //            if (!genericArgTypes.ContainsKey(pInfoGenericArgType.Name))
+                        //            {
+                        //                genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+                        //            }
+                        //            else
+                        //            {
+                        //                if (genericArgTypes[pInfoGenericArgType.Name] == null)
+                        //                {
+                        //                    genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
 
-                                        }
-                                    }
-                                    //genericArgTypes[parameterInfo.Position] =
-                                    //    args[index].Type.GetGenericArguments()[0] ?? typeof(string);
-                                }
-                                //args[index] = Expression.Convert(args[index],
-                                //                                 parameterInfos[index].ParameterType
-                                //                                                      .GetGenericTypeDefinition()
-                                //                                                      .MakeGenericType(typeof(string)));
-                            }
-                        }
-                        else
-                        {
-                            if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
-                                genericArgTypes != null)
-                            {
-                                genericArgTypes[parameterInfo.Name] = args[index].Type;
-                                //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
-                            }
-                            args[index] = TypeConversion.Convert(args[index], parameterInfo.ParameterType);
-                        }
+                        //                }
+                        //            }
+                        //            //genericArgTypes[parameterInfo.Position] =
+                        //            //    args[index].Type.GetGenericArguments()[0] ?? typeof(string);
+                        //        }
+                        //        //args[index] = Expression.Convert(args[index],
+                        //        //                                 parameterInfos[index].ParameterType
+                        //        //                                                      .GetGenericTypeDefinition()
+                        //        //                                                      .MakeGenericType(typeof(string)));
+                        //    }
+                        //}
+                        //else
+                        //{
+                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
+                        //        genericArgTypes != null)
+                        //    {
+                        //        genericArgTypes[parameterInfo.Name] = args[index].Type;
+                        //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                        //    }
+                        args[index] = TypeConversion.Convert(args[index], parameterInfo.ParameterType);
+                        //}
                     }
 
-                    List<Type> typeArgs = null;
+                    //List<Type> typeArgs = null;
 
-                    if (member.TypeArgs != null || genericArgTypes != null)
-                    {
-                        typeArgs = member.TypeArgs ?? genericArgTypes.Values.ToList();
-                    }
+                    //if (member.TypeArgs != null || genericArgTypes != null)
+                    //{
+                    //    typeArgs = member.TypeArgs ?? genericArgTypes.Values.ToList();
+                    //}
 
-                    if (isRuntimeType)
-                    {
-                        if (methodInfo.IsGenericMethod)
-                        {
-                            return Expression.Call(type, membername, typeArgs.ToArray(), args.ToArray());
-                        }
-                        else
-                        {
-                            return Expression.Call(type, membername, null, args.ToArray());
-                        }
-                    }
-                    else
-                    {
-                        if (methodInfo.IsGenericMethod)
-                        {
-                            return Expression.Call(instance, membername, typeArgs.ToArray(), args.ToArray());
-                        }
-                        else
-                        {
-                            return Expression.Call(instance, methodInfo, args.ToArray());
-                        }
-                    }
+
+                    //if (methodInfo.IsGenericMethod)
+                    //{
+                    //    return Expression.Call(instance, membername, typeArgs.ToArray(), args.ToArray());
+                    //}
+                    //else
+                    //{
+                    return Expression.Call(instance, methodInfo, args.ToArray());
+                    //}
+
 
                 }
 
 
                 var match = MethodResolution.GetExactMatch(type, instance, membername, args) ??
                             MethodResolution.GetParamsMatch(type, instance, membername, args);
+
                 if (match != null)
                 {
                     return match;
