@@ -338,8 +338,10 @@ namespace ExpressionEvaluator
             }
             else
             {
-                var mis = MethodResolution.GetApplicableMembers(type, membername, args);
-                var methodInfo = (MethodInfo)mis[0];
+                var mis = MethodResolution.GetApplicableMembers(type, member, args);
+                var methodInfo = (MethodInfo)MethodResolution.OverloadResolution(mis, args);
+
+                //var methodInfo = (MethodInfo)mis[0];
 
                 //var returnTypeArgs = methodInfo.GetGenericArguments();
 

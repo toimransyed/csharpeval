@@ -242,16 +242,16 @@ namespace ExpressionEvaluator.Operators
         }
 
         // 7.5.3.1 
-//        A function member is said to be an applicable function member with respect to an argument list A when all of the following are true:
-//•	Each argument in A corresponds to a parameter in the function member declaration as described in §7.5.1.1, and any parameter to which no argument corresponds is an optional parameter.
-//•	For each argument in A, the parameter passing mode of the argument (i.e., value, ref, or out) is identical to the parameter passing mode of the corresponding parameter, and
-//o	for a value parameter or a parameter array, an implicit conversion (§6.1) exists from the argument to the type of the corresponding parameter, or
-//o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter. After all, a ref or out parameter is an alias for the argument passed.
-//For a function member that includes a parameter array, if the function member is applicable by the above rules, it is said to be applicable in its normal form. If a function member that includes a parameter array is not applicable in its normal form, the function member may instead be applicable in its expanded form:
-//•	The expanded form is constructed by replacing the parameter array in the function member declaration with zero or more value parameters of the element type of the parameter array such that the number of arguments in the argument list A matches the total number of parameters. If A has fewer arguments than the number of fixed parameters in the function member declaration, the expanded form of the function member cannot be constructed and is thus not applicable.
-//•	Otherwise, the expanded form is applicable if for each argument in A the parameter passing mode of the argument is identical to the parameter passing mode of the corresponding parameter, and
-//o	for a fixed value parameter or a value parameter created by the expansion, an implicit conversion (§6.1) exists from the type of the argument to the type of the corresponding parameter, or
-//o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter.
+        //        A function member is said to be an applicable function member with respect to an argument list A when all of the following are true:
+        //•	Each argument in A corresponds to a parameter in the function member declaration as described in §7.5.1.1, and any parameter to which no argument corresponds is an optional parameter.
+        //•	For each argument in A, the parameter passing mode of the argument (i.e., value, ref, or out) is identical to the parameter passing mode of the corresponding parameter, and
+        //o	for a value parameter or a parameter array, an implicit conversion (§6.1) exists from the argument to the type of the corresponding parameter, or
+        //o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter. After all, a ref or out parameter is an alias for the argument passed.
+        //For a function member that includes a parameter array, if the function member is applicable by the above rules, it is said to be applicable in its normal form. If a function member that includes a parameter array is not applicable in its normal form, the function member may instead be applicable in its expanded form:
+        //•	The expanded form is constructed by replacing the parameter array in the function member declaration with zero or more value parameters of the element type of the parameter array such that the number of arguments in the argument list A matches the total number of parameters. If A has fewer arguments than the number of fixed parameters in the function member declaration, the expanded form of the function member cannot be constructed and is thus not applicable.
+        //•	Otherwise, the expanded form is applicable if for each argument in A the parameter passing mode of the argument is identical to the parameter passing mode of the corresponding parameter, and
+        //o	for a fixed value parameter or a value parameter created by the expansion, an implicit conversion (§6.1) exists from the type of the argument to the type of the corresponding parameter, or
+        //o	for a ref or out parameter, the type of the argument is identical to the type of the corresponding parameter.
 
         public static bool IsApplicableFunctionMember(MethodInfo F, List<Expression> args)
         {
@@ -344,19 +344,36 @@ namespace ExpressionEvaluator.Operators
         //// 6.1.1
         //public static bool HasIdentityConversion(Type T1, Type T2)
         //{
-            
+
         //}
+
+        //// 6.1.2
+        public static bool HasImplicitNumericConversion(Type T1, Type T2)
+        {
+            if (T1 == typeof(sbyte) && (T2 == typeof(short) || T2 == typeof(int) || T2 == typeof(long) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(byte) && (T2 == typeof(short) || T2 == typeof(ushort) || T2 == typeof(int) || T2 == typeof(uint) || T2 == typeof(long) || T2 == typeof(ulong) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(short) && (T2 == typeof(int) || T2 == typeof(long) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(ushort) && (T2 == typeof(int) || T2 == typeof(uint) || T2 == typeof(long) || T2 == typeof(ulong) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(int) && (T2 == typeof(long) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(uint) && (T2 == typeof(long) || T2 == typeof(ulong) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(long) && (T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(ulong) && (T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(char) && (T2 == typeof(ushort) || T2 == typeof(int) || T2 == typeof(uint) || T2 == typeof(long) || T2 == typeof(ulong) || T2 == typeof(float) || T2 == typeof(double) || T2 == typeof(decimal))) return true;
+            if (T1 == typeof(float) && (T2 == typeof(double))) return true;
+            return false;
+        }
 
         //7.5.3.5 Better conversion target
         public static bool IsBetterConversionTarget(Type T1, Type T2)
         {
             //            •	An implicit conversion from T1 to T2 exists, and no implicit conversion from T2 to T1 exists
+
             //•	T1 is a signed integral type and T2 is an unsigned integral type. Specifically:
             //o	T1 is sbyte and T2 is byte, ushort, uint, or ulong
             //o	T1 is short and T2 is ushort, uint, or ulong
             //o	T1 is int and T2 is uint, or ulong
             //o	T1 is long and T2 is ulong
-
+            return true;
         }
 
         public static bool BetterConversion(Expression E, Type T1, Type T2)
@@ -423,7 +440,7 @@ namespace ExpressionEvaluator.Operators
             //o	An array type is more specific than another array type (with the same number of dimensions) if the element type of the first is more specific than the element type of the second.
             //•	Otherwise if one member is a non-lifted operator and  the other is a lifted operator, the non-lifted one is better.
             //•	Otherwise, neither function member is better.
-
+            return null;
         }
 
         // 7.5.3
@@ -441,10 +458,10 @@ namespace ExpressionEvaluator.Operators
             {
                 for (int j = i + 1; j < candidates.Count; j++)
                 {
-                    GetBetterFunctionMember((MethodInfo) candidates[i], (MethodInfo) candidates[j], A);
+                    GetBetterFunctionMember((MethodInfo)candidates[i], (MethodInfo)candidates[j], A);
                 }
             }
-
+            return null;
         }
 
         // 7.6.5.1
@@ -463,16 +480,16 @@ namespace ExpressionEvaluator.Operators
                 {
                     if (!F.IsGenericMethod)
                     {
-                        if(IsApplicableFunctionMember(F, A)) appMembers.Add(F);
+                        if (IsApplicableFunctionMember(F, A)) appMembers.Add(F);
                     }
                     else // (F.IsGenericMethod)
                     {
                         //InferTypes(F, A);
                         if (IsApplicableFunctionMember(F, A)) appMembers.Add(F);
                     }
-                    
+
                 }
-                if (F.IsGenericMethod && M.TypeArgs !=null && M.TypeArgs.Any())
+                if (F.IsGenericMethod && M.TypeArgs != null && M.TypeArgs.Any())
                 {
                     if (IsApplicableFunctionMember(F, A)) appMembers.Add(F);
                 }
@@ -485,20 +502,20 @@ namespace ExpressionEvaluator.Operators
             foreach (var F in appMembers.ToList())
             {
                 var C = F.DeclaringType;
-                var baseTypeMethods =  C.BaseType.GetMethods();
+                var baseTypeMethods = C.BaseType.GetMethods();
             }
 
             //•	If the resulting set of candidate methods is empty, then further processing along the following steps are abandoned, and instead an attempt is made to 
             //  process the invocation as an extension method invocation (§7.6.5.2). If this fails, then no applicable methods exist, and a binding-time error occurs. 
             if (!appMembers.Any()) return appMembers;
-            
-//•	The best method of the set of candidate methods is identified using the overload resolution rules of §7.5.3. If a single best method cannot be identified, the method invocation is ambiguous, and a binding-time error occurs. When performing overload resolution, the parameters of a generic method are considered after substituting the type arguments (supplied or inferred) for the corresponding method type parameters.
+
+            //•	The best method of the set of candidate methods is identified using the overload resolution rules of §7.5.3. If a single best method cannot be identified, the method invocation is ambiguous, and a binding-time error occurs. When performing overload resolution, the parameters of a generic method are considered after substituting the type arguments (supplied or inferred) for the corresponding method type parameters.
 
             //•	Final validation of the chosen best method is performed:
-//o	The method is validated in the context of the method group: If the best method is a static method, the method group must have resulted from a simple-name or a member-access through a type. If the best method is an instance method, the method group must have resulted from a simple-name, a member-access through a variable or value, or a base-access. If neither of these requirements is true, a binding-time error occurs.
-//o	If the best method is a generic method, the type arguments (supplied or inferred) are checked against the constraints (§4.4.4) declared on the generic method. If any type argument does not satisfy the corresponding constraint(s) on the type parameter, a binding-time error occurs.
-//Once a method has been selected and validated at binding-time by the above steps, the actual run-time invocation is processed according to the rules of function member invocation described in §7.5.4.
-//The intuitive effect of the resolution rules described above is as follows: To locate the particular method invoked by a method invocation, start with the type indicated by the method invocation and proceed up the inheritance chain until at least one applicable, accessible, non-override method declaration is found. Then perform type inference and overload resolution on the set of applicable, accessible, non-override methods declared in that type and invoke the method thus selected. If no method was found, try instead to process the invocation as an extension method invocation.
+            //o	The method is validated in the context of the method group: If the best method is a static method, the method group must have resulted from a simple-name or a member-access through a type. If the best method is an instance method, the method group must have resulted from a simple-name, a member-access through a variable or value, or a base-access. If neither of these requirements is true, a binding-time error occurs.
+            //o	If the best method is a generic method, the type arguments (supplied or inferred) are checked against the constraints (§4.4.4) declared on the generic method. If any type argument does not satisfy the corresponding constraint(s) on the type parameter, a binding-time error occurs.
+            //Once a method has been selected and validated at binding-time by the above steps, the actual run-time invocation is processed according to the rules of function member invocation described in §7.5.4.
+            //The intuitive effect of the resolution rules described above is as follows: To locate the particular method invoked by a method invocation, start with the type indicated by the method invocation and proceed up the inheritance chain until at least one applicable, accessible, non-override method declaration is found. Then perform type inference and overload resolution on the set of applicable, accessible, non-override methods declared in that type and invoke the method thus selected. If no method was found, try instead to process the invocation as an extension method invocation.
 
 
 

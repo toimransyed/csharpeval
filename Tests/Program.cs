@@ -143,10 +143,22 @@ namespace Tests
 
         static void Main(string[] args)
         {
+            var registry1 = new TypeRegistry();
+            var registry = new TypeRegistry();
+
+            object obj = new objHolder() { result = false };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterDefaultTypes();
+
+            var cc = new CompiledExpression() { StringToParse = "if(true) obj.result=true; else obj.result = false;", TypeRegistry = registry };
+            var result = cc.Eval();
+
+
+            
             var field = new ValueHolder() { Value = "405" };
             var query = new ValueHolder() { Value = "405" };
             var ra11 = Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value);
-            TypeRegistry registry1 = new TypeRegistry();
             registry1.RegisterSymbol("field", field);
             registry1.RegisterSymbol("query", query);
             registry1.RegisterDefaultTypes();
@@ -154,17 +166,8 @@ namespace Tests
             var x11 = c11.Compile();
             var r11 = x11();
 
-            var registry = new TypeRegistry();
             var cy = new CompiledExpression() { StringToParse = "int.Parse(\"1000\")", TypeRegistry = registry };
             var resulty = cy.Eval();
-
-            object obj = new objHolder() { result = true };
-
-            registry.RegisterSymbol("obj", obj);
-            registry.RegisterDefaultTypes();
-
-            var cc = new CompiledExpression() { StringToParse = "Convert.ToBoolean(obj.result)==true", TypeRegistry = registry };
-            var result = cc.Eval();
 
             var x = new List<String>() { "Hello", "There", "World" };
             dynamic scope = new ExpandoObject();

@@ -32,7 +32,7 @@ namespace ExpressionEvaluator
             var tokens = new TokenRewriteStream(lexer);
             if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
             var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
-            Expression = parser.expression();
+            Expression = parser.statement();
             return Expression;
         }
 

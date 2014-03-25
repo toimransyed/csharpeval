@@ -1176,8 +1176,9 @@ public if_statement returns [Expression value]:
 	 {
 		if($else_statement.value == null)
 		{
-			$value = Expression.IfThenElse($boolean_expression.value, $embedded_statement.value, $else_statement.value); 
-		}else
+			$value = Expression.IfThen($boolean_expression.value, $embedded_statement.value); 
+		}
+		else
 		{
 			$value = Expression.IfThenElse($boolean_expression.value, $embedded_statement.value, $else_statement.value); 
 		}

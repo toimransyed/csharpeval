@@ -76,7 +76,7 @@ namespace ExpressionEvaluator.Operators
                 }
                 else
                 {
-                    var mis = MethodResolution.GetApplicableMembers(type, membername, args);
+                    var mis = MethodResolution.GetApplicableMembers(type, new TypeOrGeneric() { Identifier = membername }, args);
                     var methodInfo = (MethodInfo)mis[0];
 
                     var typeArgs = methodInfo.GetGenericArguments();
