@@ -127,7 +127,7 @@ public class_member_declaration:
 
 public primary_expression returns [Expression value]
 @init{
-	string membername = null;
+	TypeOrGeneric method = null;
 	int savepoint = 0;
 }: 
     ('this'    brackets) => 'this'   brackets   (primary_expression_part)*
@@ -159,11 +159,11 @@ public primary_expression returns [Expression value]
 			{
 				if (input.LT(1).Text == "(")
 				{
-                    membername = ((AccessIdentifierToken)$primary_expression_part.value).Value;
+                    method = ((AccessIdentifierToken)$primary_expression_part.value).Value;
                 }
 				else
 				{
-                    $value = ExpressionHelper.GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value);
+                    $value = ExpressionHelper.GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value.Identifier);
 					if($value==null)
 					{
 						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
@@ -176,14 +176,13 @@ public primary_expression returns [Expression value]
 			}
 			else if($primary_expression_part.value.GetType() == typeof(ArgumentsToken))
 			{
-				if(membername!=null)
+				if(method!=null)
 				{
-					$value = ExpressionHelper.GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values, IsCall);
+					$value = ExpressionHelper.GetMethod($value, method, ((ArgumentsToken)$primary_expression_part.value).Values, IsCall);
 					if($value==null)
 					{
-						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", membername), input);
+						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
 					}
-					membername = null;
 				}
 				else
 				{
@@ -214,20 +213,20 @@ public primary_expression_start returns [Expression value]:
     | 'this' 
     | 'base'
     | paren_expression  { $value = $paren_expression.value; }
-    | typeof_expression             // typeof(Foo).Name
+    | typeof_expression  { $value = $typeof_expression.value; }          // typeof(Foo).Name
     | literal { $value = $literal.value; }
     ;
 
 public primary_expression_part returns [PrimaryExpressionPartToken value]:
 // fake an access identifer if Scope is set
-    {fakedot}?=> type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.text }; }
+    {fakedot}?=> type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; }
     | access_identifier { $value = $access_identifier.value; }
     | brackets_or_arguments { $value = $brackets_or_arguments.value; }
     | '++'
     | '--' ;
 
 public access_identifier returns [AccessIdentifierToken value]:
-    access_operator   type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.text }; };
+    access_operator   type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; };
 
 public access_operator:
     '.' |  '->' ;
@@ -376,10 +375,10 @@ public initializer_value:
 
 ///////////////////////////////////////////////////////
 
-public typeof_expression: 
-    'typeof'   '('   ((unbound_type_name) => unbound_type_name
-                      | type 
-                      | 'void')   ')' ;
+public typeof_expression returns [Expression value]: 
+    'typeof'   '('   ((unbound_type_name) => unbound_type_name { $value = Expression.Constant(GetType($unbound_type_name.text)); }
+                      | type  { $value = Expression.Constant(GetType($type.text)); }
+                      | 'void' { $value = Expression.Constant(typeof(void)); } )   ')' ;
 // unbound type examples
 //foo<bar<X<>>>
 //bar::foo<>
@@ -407,11 +406,13 @@ public commas:
 
 public type_name: 
     namespace_or_type_name ;
+
 public namespace_or_type_name:
      type_or_generic   ('::' type_or_generic)? ('.'   type_or_generic)* ;
-public type_or_generic:
-    (identifier   generic_argument_list) => identifier   generic_argument_list
-    | identifier;
+
+public type_or_generic returns [TypeOrGeneric value]:
+    (identifier   generic_argument_list) => identifier   generic_argument_list { $value = new TypeOrGeneric() { Identifier = $identifier.text, TypeArgs = $generic_argument_list.value }; }
+    | identifier  { $value = new TypeOrGeneric() { Identifier = $identifier.text }; } ;
 
 public qid:        // qualified_identifier v2
     qid_start   qid_part*
@@ -429,10 +430,13 @@ public qid_start:
 public qid_part:
     access_identifier ;
 
-public generic_argument_list: 
-    '<'   type_arguments   '>' ;
-public type_arguments: 
-    type (',' type)* ;
+public generic_argument_list returns [List<Type> value]: 
+    '<'   type_arguments   '>'  { $value = $type_arguments.value; };
+public type_arguments returns [List<Type> value] 
+@init{
+	$value = new List<Type>();
+}: 
+    first=type { $value.Add(GetType($first.text)); } (',' succeeding=type { $value.Add(GetType($succeeding.text)); })* ;
 
 public type:
       ((predefined_type | type_name)  rank_specifiers) => (predefined_type | type_name)   rank_specifiers   '*'*

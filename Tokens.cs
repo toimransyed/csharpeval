@@ -15,7 +15,7 @@ namespace ExpressionEvaluator
 
     public class AccessIdentifierToken : PrimaryExpressionPartToken
     {
-        public string Value { get; set; }
+        public TypeOrGeneric Value { get; set; }
     }
 
 

@@ -5,7 +5,7 @@ namespace ExpressionEvaluator
 {
     public abstract class ExpressionCompiler
     {
-        protected Expression Expression = null;
+        public Expression Expression = null;
         protected AntlrParser Parser = null;
         public TypeRegistry TypeRegistry { get; set; }
 

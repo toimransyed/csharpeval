@@ -211,12 +211,12 @@ namespace Tests
             var tr = new TypeRegistry();
             tr.RegisterType("Enumerable", typeof(Enumerable));
 
-            //var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where(Y, (y) => y == 4)", TypeRegistry = tr };
-            //var f9 = c9.ScopeCompile<MyClass>();
+            var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where<int>(Y, (y) => y == 4)", TypeRegistry = tr };
+            var f9 = c9.ScopeCompile<MyClass>();
 
-            //Console.WriteLine(data.X);
-            //f9(data);
-//            Console.WriteLine(data.X);
+            Console.WriteLine(data.X);
+            f9(data);
+            Console.WriteLine(data.X);
 
 
             var qq = (25.82).ToString("0.00", new CultureInfo("fr-FR")) + "px";

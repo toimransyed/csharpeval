@@ -12,6 +12,28 @@ using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace ExpressionEvaluator
 {
+    public class TypeOrGeneric
+    {
+        public string Identifier { get; set; }
+        public List<Type> TypeArgs { get; set; }
+    }
+
+    public class TypeVariable
+    {
+        public TypeVariable()
+        {
+            Bounds = new List<Type>();
+            UpperBounds = new List<Type>();
+            LowerBounds = new List<Type>();
+        }
+
+        public bool IsFixed { get; set; }
+        public string Name { get; set; }
+        public List<Type> Bounds { get; set; }
+        public List<Type> UpperBounds { get; set; }
+        public List<Type> LowerBounds { get; set; }
+    }
+
     public class ExpressionHelper
     {
         private static readonly Type StringType = typeof(string);
@@ -115,6 +137,115 @@ namespace ExpressionEvaluator
             throw new Exception();
         }
 
+        public static Type[] InferTypes(MethodInfo methodInfo, List<Expression> args)
+        {
+            var parameterinfoes = methodInfo.GetParameters();
+
+            var X = methodInfo.GetGenericArguments().Select(x => new TypeVariable() { Name = x.Name }).ToArray();
+            var S = new Type[X.Length];
+            var T = parameterinfoes.Select(p => p.ParameterType).ToList();
+
+            var lookup = X.ToDictionary(x => x.Name);
+
+            // Phase 1
+            // 7.5.2.1
+            // For each of the method arguments ei:
+            // An explicit argument type inference (§26.3.3.7) is made from ei with type Ti if ei is a lambda expression, an anonymous method, or a method group.
+            // An output type inference (§26.3.3.6) is made from ei with type Ti if ei is not a lambda expression, an anonymous method, or a method group.
+            for (var i = 0; i < args.Count; i++)
+            {
+                var ei = args[i];
+                var Ti = T[i];
+                if (ei.NodeType == ExpressionType.Lambda)
+                {
+                    var lambda = ((LambdaExpression)ei);
+                    // 7.5.2.7 Explicit argument type inferences
+                    // An explicit argument type inference is made from an expression e with type T in the following way:
+                    // If e is an explicitly typed lambda expression or anonymous method with argument types U1...Uk and T is a delegate type with parameter types V1...Vk then for each Ui an exact inference (§26.3.3.8) is made from Ui for the corresponding Vi.
+
+                    var x = lambda.Parameters.Select(p => p.Type).Zip(Ti.GetGenericArguments(), (type, type1) =>
+                        {
+                            ExactInference(type, type1, lookup);
+                            return 1;
+                        }).ToList();
+
+
+                }
+                else
+                {
+                    // An output type inference is made from an expression e with type T in the following way:
+                    // If e is a lambda or anonymous method with inferred return type U (§26.3.3.11) and T is a delegate type with return type Tb, then a lower-bound inference (§26.3.3.9) is made from U for Tb.
+                    // Otherwise, if e is a method group and T is a delegate type with parameter types T1...Tk and overload resolution of e with the types T1...Tk yields a single method with return type U, then a lower-bound inference is made from U for Tb.
+                    // Otherwise, if e is an expression with type U, then a lower-bound inference is made from U for T.
+                    LowerBoundInference(ei.Type, Ti, lookup);
+
+                    // Otherwise, no inferences are made.
+                }
+            }
+
+
+
+
+
+
+            // Phase 2
+            // (26.3.3.2)
+            // 
+
+            return null;
+        }
+
+        public static void ExactInference(Type U, Type V, Dictionary<string, TypeVariable> lookup)
+        {
+            // 7.5.2.8 Exact inferences
+            // An exact inference from a type U for a type V is made as follows:
+            //var U = e.Type;
+            //var V = forType;
+            //If V is one of the unfixed Xi then U is added to the set of bounds for Xi.
+            TypeVariable tv;
+            if (lookup.TryGetValue(V.Name, out tv))
+            {
+                if (!tv.IsFixed) tv.Bounds.Add(U);
+            }
+            // Otherwise, if U is an array type Ue[...] and V is an array type Ve[...] of the same rank then an exact inference from Ue to Ve is made.
+            // Otherwise, if V is a constructed type C<V1...Vk> and U is a constructed type C<U1...Uk> then an exact inference is made from each Ui to the corresponding Vi.
+            // Otherwise, no inferences are made.
+        }
+
+        public static void LowerBoundInference(Type U, Type V, Dictionary<string, TypeVariable> lookup)
+        {
+            //7.5.2.9 Lower-bound inferences
+            //A lower-bound inference from a type U for a type V is made as follows:
+            //var U = e.Type;
+            //var V = forType;
+            //If V is one of the unfixed Xi then U is added to the set of bounds for Xi.
+            TypeVariable tv;
+            if (lookup.TryGetValue(V.Name, out tv))
+            {
+                if (!tv.IsFixed) tv.Bounds.Add(U);
+            }
+            //Otherwise if U is an array type Ue[...] and V is either an array type Ve[...] of the same rank, 
+            if ((U.IsArray && V.IsArray && U.GetArrayRank() == V.GetArrayRank() ||
+                // or if U is a one-dimensional array type Ue[]and V is one of IEnumerable<Ve>, ICollection<Ve> or IList<Ve> then:
+                U.IsArray && U.GetArrayRank() == 1 && (V.IsAssignableFrom(typeof(IEnumerable<>)) || V.IsAssignableFrom(typeof(ICollection<>)) || V.IsAssignableFrom(typeof(IList<>)))
+                ))
+            {
+                //If Ue is known to be a reference type then a lower-bound inference from Ue to Ve is made.
+                var x = 1;
+                //Otherwise, an exact inference from Ue to Ve is made.
+            }
+            //Otherwise if V is a constructed type C<V1...Vk> and there is a unique set of types U1...Uk such that a standard implicit conversion exists from U to C<U1...Uk> then an exact inference is made from each Ui for the corresponding Vi.
+            if (V.IsGenericType && U.IsGenericType)
+            {
+                var x = U.GetGenericArguments().Zip(V.GetGenericArguments(), (type, type1) =>
+                    {
+                        ExactInference(type, type1, lookup);
+                        return 1;
+                    }).ToList();
+
+            }
+            //Otherwise, no inferences are made.
+        }
 
 
         public static Expression GetProperty(Expression le, string membername)
@@ -177,7 +308,7 @@ namespace ExpressionEvaluator
             throw new Exception();
         }
 
-        public static Expression GetMethod(Expression le, string membername, List<Expression> args, bool isCall = false)
+        public static Expression GetMethod(Expression le, TypeOrGeneric member, List<Expression> args, bool isCall = false)
         {
             Expression instance = null;
             Type type = null;
@@ -185,7 +316,9 @@ namespace ExpressionEvaluator
             var isDynamic = false;
             var isRuntimeType = false;
 
+            var membername = member.Identifier;
             if (typeof(Type).IsAssignableFrom(le.Type))
+
             {
                 isRuntimeType = true;
                 type = ((Type)((ConstantExpression)le).Value);
@@ -239,6 +372,8 @@ namespace ExpressionEvaluator
                 {
                     genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
                 }
+
+                InferTypes(methodInfo, args);
 
                 // if the method is generic, try to get type args from method, if none, try to get type args from parameters
 
@@ -302,11 +437,18 @@ namespace ExpressionEvaluator
                         }
                     }
 
+                    List<Type> typeArgs = null;
+
+                    if (member.TypeArgs != null || genericArgTypes != null)
+                    {
+                        typeArgs = member.TypeArgs ?? genericArgTypes.Values.ToList();
+                    }
+
                     if (isRuntimeType)
                     {
                         if (methodInfo.IsGenericMethod)
                         {
-                            return Expression.Call(type, membername, genericArgTypes.Values.ToArray(), args.ToArray());
+                            return Expression.Call(type, membername, typeArgs.ToArray(), args.ToArray());
                         }
                         else
                         {
@@ -317,7 +459,7 @@ namespace ExpressionEvaluator
                     {
                         if (methodInfo.IsGenericMethod)
                         {
-                            return Expression.Call(instance, membername, genericArgTypes.Values.ToArray(), args.ToArray());
+                            return Expression.Call(instance, membername, typeArgs.ToArray(), args.ToArray());
                         }
                         else
                         {
