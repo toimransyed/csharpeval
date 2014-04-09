@@ -338,112 +338,195 @@ namespace ExpressionEvaluator
             }
             else
             {
-                var mis = MethodResolution.GetApplicableMembers(type, member, args);
-                var methodInfo = (MethodInfo)MethodResolution.OverloadResolution(mis, args);
+                return OldMethodHandler(type, instance, member, args);
+            }
 
-                //var methodInfo = (MethodInfo)mis[0];
+            return null;
+        }
 
-                //var returnTypeArgs = methodInfo.GetGenericArguments();
+        private static Expression NewMethodHandler(Type type, Expression instance, TypeOrGeneric member, List<Expression> args)
+        {
+            var membername = member.Identifier;
 
-                //Dictionary<string, Type> genericArgTypes = null;
+            var mis = MethodResolution.GetApplicableMembers(type, member, args);
+            var methodInfo = (MethodInfo)MethodResolution.OverloadResolution(mis, args);
 
-                //if (methodInfo.IsGenericMethod)
-                //{
-                //    genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
-                //}
+            //var methodInfo = (MethodInfo)mis[0];
 
-                InferTypes(methodInfo, args);
+            //var returnTypeArgs = methodInfo.GetGenericArguments();
 
-                // if the method is generic, try to get type args from method, if none, try to get type args from parameters
+            //Dictionary<string, Type> genericArgTypes = null;
 
-                if (methodInfo != null)
+            //if (methodInfo.IsGenericMethod)
+            //{
+            //    genericArgTypes = returnTypeArgs.ToDictionary(t => t.Name, null);
+            //}
+
+            InferTypes(methodInfo, args);
+
+            // if the method is generic, try to get type args from method, if none, try to get type args from parameters
+
+            if (methodInfo != null)
+            {
+                var parameterInfos = methodInfo.GetParameters();
+
+                foreach (var parameterInfo in parameterInfos)
                 {
-                    var parameterInfos = methodInfo.GetParameters();
+                    var index = parameterInfo.Position;
 
-                    foreach (var parameterInfo in parameterInfos)
-                    {
-                        var index = parameterInfo.Position;
-
-                        //if (parameterInfo.ParameterType.IsGenericType)
-                        //{
-                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
-                        //        genericArgTypes != null)
-                        //    {
-                        //        genericArgTypes[parameterInfo.Name] = args[index].Type;
-
-                        //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
-                        //        args[index] = Expression.Convert(args[index],
-                        //                                         parameterInfos[index].ParameterType
-                        //                                                              .GetGenericTypeDefinition()
-                        //                                                              .MakeGenericType(args[index].Type));
-                        //    }
-                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericType &&
-                        //        genericArgTypes != null)
-                        //    {
-
-                        //        foreach (var pInfoGenericArgType in parameterInfo.ParameterType.GetGenericArguments())
-                        //        {
-                        //            if (!genericArgTypes.ContainsKey(pInfoGenericArgType.Name))
-                        //            {
-                        //                genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
-                        //            }
-                        //            else
-                        //            {
-                        //                if (genericArgTypes[pInfoGenericArgType.Name] == null)
-                        //                {
-                        //                    genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
-
-                        //                }
-                        //            }
-                        //            //genericArgTypes[parameterInfo.Position] =
-                        //            //    args[index].Type.GetGenericArguments()[0] ?? typeof(string);
-                        //        }
-                        //        //args[index] = Expression.Convert(args[index],
-                        //        //                                 parameterInfos[index].ParameterType
-                        //        //                                                      .GetGenericTypeDefinition()
-                        //        //                                                      .MakeGenericType(typeof(string)));
-                        //    }
-                        //}
-                        //else
-                        //{
-                        //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
-                        //        genericArgTypes != null)
-                        //    {
-                        //        genericArgTypes[parameterInfo.Name] = args[index].Type;
-                        //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
-                        //    }
-                        args[index] = TypeConversion.Convert(args[index], parameterInfo.ParameterType);
-                        //}
-                    }
-
-                    //List<Type> typeArgs = null;
-
-                    //if (member.TypeArgs != null || genericArgTypes != null)
+                    //if (parameterInfo.ParameterType.IsGenericType)
                     //{
-                    //    typeArgs = member.TypeArgs ?? genericArgTypes.Values.ToList();
-                    //}
+                    //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
+                    //        genericArgTypes != null)
+                    //    {
+                    //        genericArgTypes[parameterInfo.Name] = args[index].Type;
 
+                    //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                    //        args[index] = Expression.Convert(args[index],
+                    //                                         parameterInfos[index].ParameterType
+                    //                                                              .GetGenericTypeDefinition()
+                    //                                                              .MakeGenericType(args[index].Type));
+                    //    }
+                    //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericType &&
+                    //        genericArgTypes != null)
+                    //    {
 
-                    //if (methodInfo.IsGenericMethod)
-                    //{
-                    //    return Expression.Call(instance, membername, typeArgs.ToArray(), args.ToArray());
+                    //        foreach (var pInfoGenericArgType in parameterInfo.ParameterType.GetGenericArguments())
+                    //        {
+                    //            if (!genericArgTypes.ContainsKey(pInfoGenericArgType.Name))
+                    //            {
+                    //                genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+                    //            }
+                    //            else
+                    //            {
+                    //                if (genericArgTypes[pInfoGenericArgType.Name] == null)
+                    //                {
+                    //                    genericArgTypes[pInfoGenericArgType.Name] = args[index].Type.GetGenericArguments()[0];
+
+                    //                }
+                    //            }
+                    //            //genericArgTypes[parameterInfo.Position] =
+                    //            //    args[index].Type.GetGenericArguments()[0] ?? typeof(string);
+                    //        }
+                    //        //args[index] = Expression.Convert(args[index],
+                    //        //                                 parameterInfos[index].ParameterType
+                    //        //                                                      .GetGenericTypeDefinition()
+                    //        //                                                      .MakeGenericType(typeof(string)));
+                    //    }
                     //}
                     //else
                     //{
-                    return Expression.Call(instance, methodInfo, args.ToArray());
+                    //    if (methodInfo.IsGenericMethod && parameterInfo.ParameterType.IsGenericParameter &&
+                    //        genericArgTypes != null)
+                    //    {
+                    //        genericArgTypes[parameterInfo.Name] = args[index].Type;
+                    //        //genericArgTypes[parameterInfo.ParameterType.GenericParameterPosition] = args[index].Type;
+                    //    }
+                    args[index] = TypeConversion.Convert(args[index], parameterInfo.ParameterType);
                     //}
-
-
                 }
 
+                //List<Type> typeArgs = null;
 
-                var match = MethodResolution.GetExactMatch(type, instance, membername, args) ??
-                            MethodResolution.GetParamsMatch(type, instance, membername, args);
+                //if (member.TypeArgs != null || genericArgTypes != null)
+                //{
+                //    typeArgs = member.TypeArgs ?? genericArgTypes.Values.ToList();
+                //}
 
-                if (match != null)
+
+                //if (methodInfo.IsGenericMethod)
+                //{
+                //    return Expression.Call(instance, membername, typeArgs.ToArray(), args.ToArray());
+                //}
+                //else
+                //{
+                return Expression.Call(instance, methodInfo, args.ToArray());
+                //}
+
+
+            }
+
+            var match = MethodResolution.GetExactMatch(type, instance, membername, args) ??
+                        MethodResolution.GetParamsMatch(type, instance, membername, args);
+
+            if (match != null)
+            {
+                return match;
+            }
+
+            return null;
+        }
+
+        private static Expression OldMethodHandler(Type type, Expression instance, TypeOrGeneric member, List<Expression> args)
+        {
+            var argTypes = args.Select(x => x.Type).ToList();
+            var membername = member.Identifier;
+
+            // Look for an exact match
+            var methodInfo = type.GetMethod(membername, argTypes.ToArray());
+
+            if (methodInfo != null)
+            {
+                var parameterInfos = methodInfo.GetParameters();
+
+                for (int i = 0; i < parameterInfos.Length; i++)
                 {
-                    return match;
+                    args[i] = TypeConversion.Convert(args[i], parameterInfos[i].ParameterType);
                 }
+
+                return Expression.Call(instance, methodInfo, args);
+            }
+
+            // assume params
+
+            var methodInfos = type.GetMethods().Where(x => x.Name == membername);
+            var matchScore = new List<Tuple<MethodInfo, int>>();
+
+            foreach (var info in methodInfos.OrderByDescending(m => m.GetParameters().Count()))
+            {
+                var parameterInfos = info.GetParameters();
+                var lastParam = parameterInfos.Last();
+                var newArgs = args.Take(parameterInfos.Length - 1).ToList();
+                var paramArgs = args.Skip(parameterInfos.Length - 1).ToList();
+
+                int i = 0;
+                int k = 0;
+
+                foreach (var expression in newArgs)
+                {
+                    k += TypeConversion.CanConvert(expression.Type, parameterInfos[i].ParameterType);
+                    i++;
+                }
+
+                if (k > 0)
+                {
+                    if (Attribute.IsDefined(lastParam, typeof(ParamArrayAttribute)))
+                    {
+                        k += paramArgs.Sum(arg => TypeConversion.CanConvert(arg.Type, lastParam.ParameterType.GetElementType()));
+                    }
+                }
+
+                matchScore.Add(new Tuple<MethodInfo, int>(info, k));
+            }
+
+            var info2 = matchScore.OrderBy(x => x.Item2).FirstOrDefault(x => x.Item2 >= 0);
+            if (info2 != null)
+            {
+                var parameterInfos2 = info2.Item1.GetParameters();
+                var lastParam2 = parameterInfos2.Last();
+                var newArgs2 = args.Take(parameterInfos2.Length - 1).ToList();
+                var paramArgs2 = args.Skip(parameterInfos2.Length - 1).ToList();
+
+
+                for (int i = 0; i < parameterInfos2.Length - 1; i++)
+                {
+                    newArgs2[i] = TypeConversion.Convert(newArgs2[i], parameterInfos2[i].ParameterType);
+                }
+
+                var targetType = lastParam2.ParameterType.GetElementType();
+
+                newArgs2.Add(Expression.NewArrayInit(targetType, paramArgs2.Select(x => TypeConversion.Convert(x, targetType))));
+                return Expression.Call(instance, info2.Item1, newArgs2);
             }
 
             return null;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using ExpressionEvaluator;
@@ -131,6 +132,7 @@ namespace Tests
     public class objHolder
     {
         public bool result { get; set; }
+        public object value { get; set; }
     }
 
     public class ValueHolder
@@ -146,16 +148,16 @@ namespace Tests
             var registry1 = new TypeRegistry();
             var registry = new TypeRegistry();
 
-            object obj = new objHolder() { result = false };
+            object obj = new objHolder() { result = false, value = 1 };
 
             registry.RegisterSymbol("obj", obj);
             registry.RegisterDefaultTypes();
 
-            var cc = new CompiledExpression() { StringToParse = "if(true) obj.result=true; else obj.result = false;", TypeRegistry = registry };
+            var cc = new CompiledExpression() { StringToParse = "switch(3){ case 1: case 3: obj.result = true; case 2: obj.result = true; default: false; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
             var result = cc.Eval();
 
 
-            
             var field = new ValueHolder() { Value = "405" };
             var query = new ValueHolder() { Value = "405" };
             var ra11 = Convert.ToInt32(field.Value) >= Convert.ToInt32(query.Value);
@@ -211,15 +213,15 @@ namespace Tests
             f1(data);
             Console.WriteLine(data.X);
 
-            var tr = new TypeRegistry();
-            tr.RegisterType("Enumerable", typeof(Enumerable));
+            //var tr = new TypeRegistry();
+            //tr.RegisterType("Enumerable", typeof(Enumerable));
 
-            var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where<int>(Y, (y) => y == 4)", TypeRegistry = tr };
-            var f9 = c9.ScopeCompile<MyClass>();
+            //var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where<int>(Y, (y) => y == 4)", TypeRegistry = tr };
+            //var f9 = c9.ScopeCompile<MyClass>();
 
-            Console.WriteLine(data.X);
-            f9(data);
-            Console.WriteLine(data.X);
+            //Console.WriteLine(data.X);
+            //f9(data);
+            //Console.WriteLine(data.X);
 
 
             var qq = (25.82).ToString("0.00", new CultureInfo("fr-FR")) + "px";

@@ -32,10 +32,23 @@ namespace ExpressionEvaluator
             var tokens = new TokenRewriteStream(lexer);
             if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
             var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
-            Expression = parser.statement();
+            switch (ExpressionType)
+            {
+                case CompiledExpressionType.Expression:
+                    Expression = parser.expression();
+                    break;
+                case CompiledExpressionType.Statement:
+                    Expression = parser.statement();
+                    break;
+                case CompiledExpressionType.StatementList:
+                    Expression = Expression.Block(parser.statement_list());
+                    break;
+            }
             return Expression;
         }
 
         public object Global { get; set; }
+
+        public CompiledExpressionType ExpressionType { get; set; }
     }
 }

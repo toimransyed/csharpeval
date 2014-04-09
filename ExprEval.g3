@@ -23,6 +23,7 @@ using Debug = System.Diagnostics.Debug;
 @parser::header       
 {
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 }
 
@@ -189,6 +190,14 @@ public primary_expression returns [Expression value]
 					// $value = GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values);
 				}
 			}
+			else if($primary_expression_part.value.GetType() == typeof(PostIncrementToken))
+			{
+			    $value = Expression.Increment($value);
+			}
+			else if($primary_expression_part.value.GetType() == typeof(PostDecrementToken))
+			{
+			    $value = Expression.Decrement($value);
+			}
 			 fakedot = false;
 		})* 
     | 'new' (   (object_creation_expression   ('.'|'->'|'[')) => 
@@ -222,8 +231,8 @@ public primary_expression_part returns [PrimaryExpressionPartToken value]:
     {fakedot}?=> type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; }
     | access_identifier { $value = $access_identifier.value; }
     | brackets_or_arguments { $value = $brackets_or_arguments.value; }
-    | '++'
-    | '--' ;
+    | '++' { $value = new PostIncrementToken(); }
+    | '--' { $value = new PostDecrementToken(); } ;
 
 public access_identifier returns [AccessIdentifierToken value]:
     access_operator   type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; };
@@ -817,8 +826,8 @@ public constant_declarators:
     constant_declarator (',' constant_declarator)* ;
 public constant_declarator:
     identifier   ('='   constant_expression)? ;
-public constant_expression:
-    expression;
+public constant_expression returns [Expression value]:
+    expression { $value = $expression.value; };
 
 ///////////////////////////////////////////////////////
 public field_declaration:
@@ -1174,31 +1183,57 @@ public if_statement returns [Expression value]:
     // else goes with closest if
     'if'   '('   boolean_expression   ')'  embedded_statement (('else') => else_statement )?
 	 {
+		var boolExp = $boolean_expression.value;
+		
+		if(boolExp.Type != typeof(System.Boolean))
+		{
+			boolExp = Expression.Convert(boolExp, typeof(bool));
+		}
+
 		if($else_statement.value == null)
 		{
-			$value = Expression.IfThen($boolean_expression.value, $embedded_statement.value); 
+			$value = Expression.IfThen(boolExp, $embedded_statement.value); 
 		}
 		else
 		{
-			$value = Expression.IfThenElse($boolean_expression.value, $embedded_statement.value, $else_statement.value); 
+			$value = Expression.IfThenElse(boolExp, $embedded_statement.value, $else_statement.value); 
 		}
 	 }
      ; 
 public else_statement returns [Expression value]:
     'else'   embedded_statement { $value = $embedded_statement.value; };
 public switch_statement returns [Expression value]:
-    'switch'   '('   expression   ')'   switch_block  { $value = Expression.Switch($expression.value, $switch_block.value.ToArray()); };
+    'switch'   '('   expression   ')'   switch_block  { 
+		// TODO: Better switch handling???
+		var defaultCase = $switch_block.value.SingleOrDefault(x=>x.TestValues[0].Type == typeof(void));
+		var cases = $switch_block.value.Where(x=>x.TestValues[0].Type != typeof(void)).ToArray();
+
+		if(defaultCase == null)
+		{
+			$value = Expression.Switch($expression.value, cases); 
+		}
+		else
+		{
+			$value = Expression.Switch($expression.value, defaultCase.Body, cases); 
+		}
+	};
 public switch_block returns [List<SwitchCase> value]:
-    '{'   switch_sections?   '}' ;
-public switch_sections:
-    switch_section+ ;
-public switch_section:
-    switch_labels   statement_list ;
-public switch_labels:
-    switch_label+ ;
-public switch_label:
-    ('case'   constant_expression   ':')
-    | ('default'   ':') ;
+    '{'   switch_sections?  '}' { $value = $switch_sections.value; };
+public switch_sections returns [List<SwitchCase> value]
+@init{
+	$value = new List<SwitchCase>();
+}:
+    (switch_section { $value.Add($switch_section.value); } )+ ;
+public switch_section returns [SwitchCase value]:
+    switch_labels   statement_list { $value = Expression.SwitchCase(Expression.Block($statement_list.value), $switch_labels.value); } ;
+public switch_labels returns [List<Expression> value]
+@init{
+	$value = new List<Expression>();
+}:
+    (switch_label { $value.Add($switch_label.value); } )+ ;
+public switch_label returns [Expression value]:
+    ('case'   constant_expression   ':') { $value = $constant_expression.value; }
+    | ('default'   ':') { $value = Expression.Empty(); } ; 
 public iteration_statement returns [Expression value]:
     while_statement
     | do_statement

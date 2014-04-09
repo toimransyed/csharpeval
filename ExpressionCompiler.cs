@@ -3,9 +3,18 @@ using System.Linq.Expressions;
 
 namespace ExpressionEvaluator
 {
+    public enum CompiledExpressionType
+    {
+        Expression = 0,
+        Statement = 1,
+        StatementList = 2
+    }
+
     public abstract class ExpressionCompiler
     {
         public Expression Expression = null;
+        public CompiledExpressionType ExpressionType { get; set; }
+
         protected AntlrParser Parser = null;
         public TypeRegistry TypeRegistry { get; set; }
 
@@ -25,6 +34,7 @@ namespace ExpressionEvaluator
         protected Expression BuildTree(Expression scopeParam = null, bool isCall = false)
         {
             Parser.TypeRegistry = TypeRegistry;
+            Parser.ExpressionType = ExpressionType;
             return Expression = Parser.Parse(scopeParam, isCall);
         }
 
