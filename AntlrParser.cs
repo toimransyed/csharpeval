@@ -38,10 +38,35 @@ namespace ExpressionEvaluator
                     Expression = parser.expression();
                     break;
                 case CompiledExpressionType.Statement:
-                    Expression = parser.statement();
+                    var statement = parser.statement();
+                    if (statement != null)
+                    {
+                        Expression = statement.Expression;
+                    }
                     break;
                 case CompiledExpressionType.StatementList:
-                    Expression = Expression.Block(parser.statement_list());
+                    var statements = parser.statement_list();
+
+                    var variables = statements.Where(x => x.Expression.NodeType == System.Linq.Expressions.ExpressionType.RuntimeVariables).ToList();
+                    var parameters = variables.Select(x => x.Expression).Cast<RuntimeVariablesExpression>().SelectMany(x => x.Variables).ToList();
+                    var initializers = variables.SelectMany(x => x.Initializers).ToList();
+                    var expressions = new List<Expression>();
+                    if (initializers.Any())
+                    {
+                        expressions.AddRange(initializers);
+                    }
+                    expressions.AddRange(statements.Where(x => x.Expression.NodeType != System.Linq.Expressions.ExpressionType.RuntimeVariables).Select(x => x.Expression).ToList());
+
+
+                    if (parameters.Any())
+                    {
+                        Expression = Expression.Block(parameters, expressions);
+                    }
+                    else
+                    {
+                        Expression = Expression.Block(expressions);
+                    }
+
                     break;
             }
             return Expression;

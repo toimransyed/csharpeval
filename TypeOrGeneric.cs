@@ -8,6 +8,4 @@ namespace ExpressionEvaluator
         public string Identifier { get; set; }
         public List<Type> TypeArgs { get; set; }
     }
-
-
 }

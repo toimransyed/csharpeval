@@ -132,8 +132,16 @@ namespace Tests
     public class objHolder
     {
         public bool result { get; set; }
-        public object value { get; set; }
+        public NumEnum value { get; set; }
+        public int number { get; set; }
     }
+
+    public enum NumEnum
+    {
+        One = 1,
+        Two = 2,
+        Three = 3
+   }
 
     public class ValueHolder
     {
@@ -148,12 +156,13 @@ namespace Tests
             var registry1 = new TypeRegistry();
             var registry = new TypeRegistry();
 
-            object obj = new objHolder() { result = false, value = 1 };
+            object obj = new objHolder() { result = false, value = NumEnum.Two };
 
             registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
             registry.RegisterDefaultTypes();
 
-            var cc = new CompiledExpression() { StringToParse = "switch(3){ case 1: case 3: obj.result = true; case 2: obj.result = true; default: false; }", TypeRegistry = registry };
+            var cc = new CompiledExpression() { StringToParse = "var x = new objHolder(); x.number = 3; x.number++; var varname = 23; varname++; obj.number = varname -  x.number;", TypeRegistry = registry };
             cc.ExpressionType = CompiledExpressionType.StatementList;
             var result = cc.Eval();
 

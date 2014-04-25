@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using ExpressionEvaluator.Operators;
 using Microsoft.CSharp.RuntimeBinder;
@@ -258,9 +259,20 @@ namespace ExpressionEvaluator
                     new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
                     );
 
-                var result = Expression.Dynamic(binder, typeof(object), instance);
+                Expression result = Expression.Dynamic(binder, typeof(object), instance);
 
-                return result;
+                // Item#8: worksround suggested by gadnio
+                // try to get the property explicitly, get its value and unbox it
+                //var callSite = CallSite<Func<CallSite, object, object>>.Create(binder);
+                //var parentObject = Expression.Lambda<Func<object>>(instance).Compile()();
+                //var propertyValue = callSite.Target(callSite, parentObject);
+                //if (propertyValue != null && propertyValue.GetType() != typeof(object))
+                //{
+                //    // unbox!
+                //    result = Expression.Constant(propertyValue);
+                //}
+
+                return result;  
             }
             else
             {

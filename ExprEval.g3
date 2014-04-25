@@ -192,11 +192,11 @@ public primary_expression returns [Expression value]
 			}
 			else if($primary_expression_part.value.GetType() == typeof(PostIncrementToken))
 			{
-			    $value = Expression.Increment($value);
+			    $value = Expression.Assign(value, Expression.Increment($value));
 			}
 			else if($primary_expression_part.value.GetType() == typeof(PostDecrementToken))
 			{
-			    $value = Expression.Decrement($value);
+			    $value = Expression.Assign(value, Expression.Decrement($value));
 			}
 			 fakedot = false;
 		})* 
@@ -320,12 +320,12 @@ public array_creation_expression:
             (array_initializer    // var a = new[] { 1, 10, 100, 1000 }; // int[]
             )
         ) ;
-public array_initializer:
+public array_initializer returns [Expression value]:
     '{'   variable_initializer_list?   ','?   '}' ;
-public variable_initializer_list:
+public variable_initializer_list returns [Expression value]:
     variable_initializer (',' variable_initializer)* ;
-public variable_initializer:
-    expression    | array_initializer ;
+public variable_initializer returns [Expression value]:
+    expression  { $value = $expression.value; }  | array_initializer  { $value = $array_initializer.value; } ;
 public sizeof_expression:
     'sizeof'   '('   unmanaged_type   ')';
 public checked_expression: 
@@ -413,11 +413,11 @@ public commas:
 //    Type Section
 ///////////////////////////////////////////////////////
 
-public type_name: 
-    namespace_or_type_name ;
+public type_name returns [TypeOrGeneric value]: 
+    namespace_or_type_name { $value = $namespace_or_type_name.value; };
 
-public namespace_or_type_name:
-     type_or_generic   ('::' type_or_generic)? ('.'   type_or_generic)* ;
+public namespace_or_type_name returns [TypeOrGeneric value]:
+     first=type_or_generic  { $value = $first.value; }  ('::' type_or_generic)? ('.' type_or_generic)* ;
 
 public type_or_generic returns [TypeOrGeneric value]:
     (identifier   generic_argument_list) => identifier   generic_argument_list { $value = new TypeOrGeneric() { Identifier = $identifier.text, TypeArgs = $generic_argument_list.value }; }
@@ -447,10 +447,10 @@ public type_arguments returns [List<Type> value]
 }: 
     first=type { $value.Add(GetType($first.text)); } (',' succeeding=type { $value.Add(GetType($succeeding.text)); })* ;
 
-public type:
+public type returns [TypeOrGeneric value]:
       ((predefined_type | type_name)  rank_specifiers) => (predefined_type | type_name)   rank_specifiers   '*'*
     | ((predefined_type | type_name)  ('*'+ | '?')) => (predefined_type | type_name)   ('*'+ | '?')
-    | (predefined_type | type_name)
+    | (predefined_type { $value = new TypeOrGeneric() { Identifier = $predefined_type.text }; }| type_name { $value = $type_name.value; })
     | 'void' '*'+
     ;
 public non_nullable_type:
@@ -477,12 +477,36 @@ public pointer_type:
 ///////////////////////////////////////////////////////
 public block returns [Expression value]:
     ';' { $value = Expression.Block(); }
-    | '{'   statement_list?   '}' { $value = Expression.Block($statement_list.value.ToArray()); };
-public statement_list returns [List<Expression> value]
+    | '{'   statement_list?   '}' { 
+		var statements = $statement_list.value;
+		var variables = statements.Where(x => x.Expression.NodeType == ExpressionType.RuntimeVariables).ToList();
+		var parameters = variables.Select(x => x.Expression).Cast<RuntimeVariablesExpression>().SelectMany(x => x.Variables).ToList();
+		var initializers = variables.SelectMany(x => x.Initializers).ToList();
+		var expressions = new List<Expression>();
+		if(initializers.Any())
+		{
+			expressions.AddRange(initializers);
+		}
+		expressions.AddRange(statements.Where(x => x.Expression.NodeType != ExpressionType.RuntimeVariables).Select(x => x.Expression).ToList());
+
+		if(parameters.Any())
+		{
+			$value = Expression.Block(parameters, expressions); 
+		}
+		else
+		{
+			$value = Expression.Block(expressions); 
+		}
+		};
+public statement_list returns [List<Statement> value]
 @init{
-	$value = new List<Expression>();
+	$value = new List<Statement>();
 }:
-    (statement { value.Add($statement.value); })+ ;
+    (statement 
+	{ 
+		$value.Add($statement.value); 
+	}
+	)+ ;
     
 ///////////////////////////////////////////////////////
 //    Expression Section
@@ -830,11 +854,11 @@ public constant_expression returns [Expression value]:
     expression { $value = $expression.value; };
 
 ///////////////////////////////////////////////////////
-public field_declaration:
-    variable_declarators   ';'    ;
-public variable_declarators:
-    variable_declarator (','   variable_declarator)* ;
-public variable_declarator:
+public field_declaration returns [Expression value]:
+    variable_declarators { $value = $variable_declarators.value; }  ';'    ;
+public variable_declarators returns [Expression value]:
+    first=variable_declarator  { $value = $first.value; }  (','  succeeding=variable_declarator)* ;
+public variable_declarator returns [Expression value]:
     type_name ('='   variable_initializer)? ;        // eg. event EventHandler IInterface.VariableName = Foo;
 
 ///////////////////////////////////////////////////////
@@ -1115,10 +1139,10 @@ public invocation_part:
 
 ///////////////////////////////////////////////////////
 
-public statement returns [Expression value]:
+public statement returns [Statement value]:
     (declaration_statement) => declaration_statement { $value = $declaration_statement.value; }
     | (identifier   ':') => labeled_statement
-    | embedded_statement { $value = $embedded_statement.value; }
+    | embedded_statement { $value = new Statement() { Expression = $embedded_statement.value }; }
     ;
 public embedded_statement returns [Expression value]:
     block { $value = $block.value; } 
@@ -1148,26 +1172,58 @@ public unsafe_statement:
     'unsafe'   block;
 public labeled_statement:
     identifier   ':'   statement ;
-public declaration_statement returns [Expression value]:
+public declaration_statement returns [Statement value]:
     (local_variable_declaration { $value = $local_variable_declaration.value; } 
     | local_constant_declaration { $value = $local_constant_declaration.value; }) ';' ;
-public local_variable_declaration returns [Expression value]:
-    local_variable_type   local_variable_declarators ;
-public local_variable_type:
-    ('var') => 'var'
-    | ('dynamic') => 'dynamic'
-    | type ;
-public local_variable_declarators returns [List<Expression> value] @init { $value =  new List<Expression>(); }:
-    local_variable_declarator (',' local_variable_declarator)* ;
-public local_variable_declarator returns [Expression value]:
-    identifier ('='   local_variable_initializer)? ; 
+public local_variable_declaration returns [Statement value]:
+    local_variable_type   local_variable_declarators { 
+		var declarations = new List<Expression>();
+		var parameters = new List<ParameterExpression>();
+		var result = new Statement();
+
+		foreach(var variable in $local_variable_declarators.value)
+		{
+			Type varType = null;
+
+			if($local_variable_type.value.Identifier == "var" && variable.Initializer != null)
+			{
+				varType = variable.Initializer.Type;
+			}
+			else
+			{
+				varType = GetType($local_variable_type.value.Identifier);
+			}
+
+			var parameter = Expression.Variable(varType, variable.Identifier);
+			parameters.Add(parameter);
+			
+			if(variable.Initializer != null) {
+				declarations.Add(Expression.Assign(parameter, variable.Initializer));
+			}
+		}
+		
+		ParameterList.Add(parameters);
+		
+		result.Expression = Expression.RuntimeVariables(parameters);
+		result.Initializers = declarations;
+
+		$value = result;
+	} ;
+public local_variable_type returns [TypeOrGeneric value]:
+    ('var') => 'var'  { $value = new TypeOrGeneric() { Identifier = "var" } ; }
+    | ('dynamic') => 'dynamic' { $value = new TypeOrGeneric() { Identifier = "dynamic" } ; }
+    | type { $value = $type.value; } ;
+public local_variable_declarators returns [List<Variable> value] @init { $value =  new List<Variable>(); }:
+    first=local_variable_declarator { $value.Add($first.value); } (',' succeeding=local_variable_declarator { $value.Add($succeeding.value); })* ;
+public local_variable_declarator returns [Variable value]:
+    identifier { $value = new Variable() { Identifier = $identifier.text }; } ('='   local_variable_initializer { $value.Initializer = $local_variable_initializer.value; })? ; 
 public local_variable_initializer returns [Expression value]:
-    expression
-    | array_initializer 
+    expression { $value = $expression.value; }
+    | array_initializer { $value = $array_initializer.value; }
     | stackalloc_initializer;
 public stackalloc_initializer:
     'stackalloc'   unmanaged_type   '['   expression   ']' ;
-public local_constant_declaration returns [Expression value]:
+public local_constant_declaration returns [Statement value]:
     'const'   type   constant_declarators ;
 public expression_statement returns [Expression value]:
     expression   ';' { $value = $expression.value; } ;
@@ -1225,7 +1281,7 @@ public switch_sections returns [List<SwitchCase> value]
 }:
     (switch_section { $value.Add($switch_section.value); } )+ ;
 public switch_section returns [SwitchCase value]:
-    switch_labels   statement_list { $value = Expression.SwitchCase(Expression.Block($statement_list.value), $switch_labels.value); } ;
+    switch_labels   statement_list { $value = Expression.SwitchCase(Expression.Block($statement_list.value.Select(x => x.Expression)), $switch_labels.value); } ;
 public switch_labels returns [List<Expression> value]
 @init{
 	$value = new List<Expression>();

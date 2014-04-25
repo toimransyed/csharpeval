@@ -272,6 +272,26 @@ namespace ExpressionEvaluator.Tests
 
         }
 
+        [TestMethod]
+        public void IfTheElseStatementList()
+        {
+            var a = new ClassA() { x = 1 };
+            var t = new TypeRegistry();
+            t.RegisterSymbol("a", a);
+            var p = new CompiledExpression { StringToParse = "if(a.x == 1) a.y = 2; else { a.y = 3; } a.z = a.y;", TypeRegistry = t };
+            p.ExpressionType = CompiledExpressionType.StatementList;
+            var f = p.Eval();
+            Assert.AreEqual(a.y, 2);
+            Assert.AreEqual(a.y, a.z);
+        }
+
+    }
+
+    public class ClassA
+    {
+        public int x { get; set; }
+        public int y { get; set; }
+        public int z { get; set; }
     }
 
     public class NameValue<T>
