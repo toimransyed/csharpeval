@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Antlr.Runtime;
+using ExpressionEvaluator;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
     public partial class ExprEvalParser
     {
@@ -12,7 +13,7 @@ namespace ExpressionEvaluator
         public bool IsCall { get; set; }
 
         public TypeRegistry TypeRegistry { get; set; }
-
+        
         public override void ReportError(RecognitionException e)
         {
             base.ReportError(e);

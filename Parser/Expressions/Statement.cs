@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser.Expressions
 {
     public class Statement
     {

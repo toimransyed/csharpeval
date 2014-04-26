@@ -1,6 +1,6 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser.Expressions
 {
     public class Variable
     {

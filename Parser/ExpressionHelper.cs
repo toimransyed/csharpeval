@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
@@ -7,13 +7,13 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using ExpressionEvaluator.Operators;
+using ExpressionEvaluator.Parser.Expressions;
 using Microsoft.CSharp.RuntimeBinder;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
-    public class ExpressionHelper
+    internal class ExpressionHelper
     {
         private static readonly Type StringType = typeof(string);
         private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString", new Type[] { typeof(CultureInfo) });
@@ -129,8 +129,8 @@ namespace ExpressionEvaluator
             // Phase 1
             // 7.5.2.1
             // For each of the method arguments ei:
-            // An explicit argument type inference (Â§26.3.3.7) is made from ei with type Ti if ei is a lambda expression, an anonymous method, or a method group.
-            // An output type inference (Â§26.3.3.6) is made from ei with type Ti if ei is not a lambda expression, an anonymous method, or a method group.
+            // An explicit argument type inference (§26.3.3.7) is made from ei with type Ti if ei is a lambda expression, an anonymous method, or a method group.
+            // An output type inference (§26.3.3.6) is made from ei with type Ti if ei is not a lambda expression, an anonymous method, or a method group.
             for (var i = 0; i < args.Count; i++)
             {
                 var ei = args[i];
@@ -140,7 +140,7 @@ namespace ExpressionEvaluator
                     var lambda = ((LambdaExpression)ei);
                     // 7.5.2.7 Explicit argument type inferences
                     // An explicit argument type inference is made from an expression e with type T in the following way:
-                    // If e is an explicitly typed lambda expression or anonymous method with argument types U1...Uk and T is a delegate type with parameter types V1...Vk then for each Ui an exact inference (Â§26.3.3.8) is made from Ui for the corresponding Vi.
+                    // If e is an explicitly typed lambda expression or anonymous method with argument types U1...Uk and T is a delegate type with parameter types V1...Vk then for each Ui an exact inference (§26.3.3.8) is made from Ui for the corresponding Vi.
 
                     var x = lambda.Parameters.Select(p => p.Type).Zip(Ti.GetGenericArguments(), (type, type1) =>
                         {
@@ -153,7 +153,7 @@ namespace ExpressionEvaluator
                 else
                 {
                     // An output type inference is made from an expression e with type T in the following way:
-                    // If e is a lambda or anonymous method with inferred return type U (Â§26.3.3.11) and T is a delegate type with return type Tb, then a lower-bound inference (Â§26.3.3.9) is made from U for Tb.
+                    // If e is a lambda or anonymous method with inferred return type U (§26.3.3.11) and T is a delegate type with return type Tb, then a lower-bound inference (§26.3.3.9) is made from U for Tb.
                     // Otherwise, if e is a method group and T is a delegate type with parameter types T1...Tk and overload resolution of e with the types T1...Tk yields a single method with return type U, then a lower-bound inference is made from U for Tb.
                     // Otherwise, if e is an expression with type U, then a lower-bound inference is made from U for T.
                     LowerBoundInference(ei.Type, Ti, lookup);
@@ -263,6 +263,7 @@ namespace ExpressionEvaluator
 
                 // Item#8: worksround suggested by gadnio
                 // try to get the property explicitly, get its value and unbox it
+                // fails with ScopeCompile...
                 //var callSite = CallSite<Func<CallSite, object, object>>.Create(binder);
                 //var parentObject = Expression.Lambda<Func<object>>(instance).Compile()();
                 //var propertyValue = callSite.Target(callSite, parentObject);
@@ -272,7 +273,7 @@ namespace ExpressionEvaluator
                 //    result = Expression.Constant(propertyValue);
                 //}
 
-                return result;  
+                return result;
             }
             else
             {
