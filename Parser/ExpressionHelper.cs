@@ -16,12 +16,15 @@ namespace ExpressionEvaluator.Parser
     internal class ExpressionHelper
     {
         private static readonly Type StringType = typeof(string);
-        private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString", new Type[] { typeof(CultureInfo) });
+
+        private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString",
+                                                                                           new Type[] { typeof(CultureInfo) });
 
 
         private static Expression ConvertToString(Expression instance)
         {
-            return Expression.Call(typeof(Convert), "ToString", null, instance, Expression.Constant(CultureInfo.InvariantCulture));
+            return Expression.Call(typeof(Convert), "ToString", null, instance,
+                                   Expression.Constant(CultureInfo.InvariantCulture));
         }
 
         public static Expression Add(Expression le, Expression re)
@@ -206,7 +209,9 @@ namespace ExpressionEvaluator.Parser
             //Otherwise if U is an array type Ue[...] and V is either an array type Ve[...] of the same rank, 
             if ((U.IsArray && V.IsArray && U.GetArrayRank() == V.GetArrayRank() ||
                 // or if U is a one-dimensional array type Ue[]and V is one of IEnumerable<Ve>, ICollection<Ve> or IList<Ve> then:
-                U.IsArray && U.GetArrayRank() == 1 && (V.IsAssignableFrom(typeof(IEnumerable<>)) || V.IsAssignableFrom(typeof(ICollection<>)) || V.IsAssignableFrom(typeof(IList<>)))
+                 U.IsArray && U.GetArrayRank() == 1 &&
+                 (V.IsAssignableFrom(typeof(IEnumerable<>)) || V.IsAssignableFrom(typeof(ICollection<>)) ||
+                  V.IsAssignableFrom(typeof(IList<>)))
                 ))
             {
                 //If Ue is known to be a reference type then a lower-bound inference from Ue to Ve is made.
@@ -299,7 +304,8 @@ namespace ExpressionEvaluator.Parser
             throw new Exception();
         }
 
-        public static Expression GetMethod(Expression le, TypeOrGeneric member, List<Expression> args, bool isCall = false)
+        public static Expression GetMethod(Expression le, TypeOrGeneric member, List<Expression> args,
+                                           bool isCall = false)
         {
             Expression instance = null;
             Type type = null;
@@ -357,7 +363,8 @@ namespace ExpressionEvaluator.Parser
             return null;
         }
 
-        private static Expression NewMethodHandler(Type type, Expression instance, TypeOrGeneric member, List<Expression> args)
+        private static Expression NewMethodHandler(Type type, Expression instance, TypeOrGeneric member,
+                                                   List<Expression> args)
         {
             var membername = member.Identifier;
 
@@ -470,7 +477,8 @@ namespace ExpressionEvaluator.Parser
             return null;
         }
 
-        private static Expression OldMethodHandler(Type type, Expression instance, TypeOrGeneric member, List<Expression> args)
+        private static Expression OldMethodHandler(Type type, Expression instance, TypeOrGeneric member,
+                                                   List<Expression> args)
         {
             var argTypes = args.Select(x => x.Type).ToList();
             var membername = member.Identifier;
@@ -515,7 +523,9 @@ namespace ExpressionEvaluator.Parser
                 {
                     if (Attribute.IsDefined(lastParam, typeof(ParamArrayAttribute)))
                     {
-                        k += paramArgs.Sum(arg => TypeConversion.CanConvert(arg.Type, lastParam.ParameterType.GetElementType()));
+                        k +=
+                            paramArgs.Sum(
+                                arg => TypeConversion.CanConvert(arg.Type, lastParam.ParameterType.GetElementType()));
                     }
                 }
 
@@ -538,7 +548,8 @@ namespace ExpressionEvaluator.Parser
 
                 var targetType = lastParam2.ParameterType.GetElementType();
 
-                newArgs2.Add(Expression.NewArrayInit(targetType, paramArgs2.Select(x => TypeConversion.Convert(x, targetType))));
+                newArgs2.Add(Expression.NewArrayInit(targetType,
+                                                     paramArgs2.Select(x => TypeConversion.Convert(x, targetType))));
                 return Expression.Call(instance, info2.Item1, newArgs2);
             }
 
@@ -729,7 +740,10 @@ namespace ExpressionEvaluator.Parser
                 {
                     le = Expression.IsTrue(Expression.Convert(le, typeof(bool)));
                     expressionType = ExpressionType.Or;
-                    return Expression.Condition(le, Expression.Constant(true), Expression.Convert(DynamicBinaryOperator(Expression.Constant(false), re, expressionType), typeof(bool)));
+                    return Expression.Condition(le, Expression.Constant(true),
+                                                Expression.Convert(
+                                                    DynamicBinaryOperator(Expression.Constant(false), re, expressionType),
+                                                    typeof(bool)));
                 }
 
 
@@ -737,7 +751,10 @@ namespace ExpressionEvaluator.Parser
                 {
                     le = Expression.IsFalse(Expression.Convert(le, typeof(bool)));
                     expressionType = ExpressionType.And;
-                    return Expression.Condition(le, Expression.Constant(false), Expression.Convert(DynamicBinaryOperator(Expression.Constant(true), re, expressionType), typeof(bool)));
+                    return Expression.Condition(le, Expression.Constant(false),
+                                                Expression.Convert(
+                                                    DynamicBinaryOperator(Expression.Constant(true), re, expressionType),
+                                                    typeof(bool)));
                 }
 
                 return DynamicBinaryOperator(le, re, expressionType);
@@ -911,11 +928,12 @@ namespace ExpressionEvaluator.Parser
         {
             var expArgs = new List<Expression>() { le };
 
-            var binderM = Binder.UnaryOperation(CSharpBinderFlags.None, expressionType, le.Type, new CSharpArgumentInfo[]
-		            {
-			            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-			            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-		            });
+            var binderM = Binder.UnaryOperation(CSharpBinderFlags.None, expressionType, le.Type,
+                                                new CSharpArgumentInfo[]
+                                                    {
+                                                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                                                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+                                                    });
 
             return Expression.Dynamic(binderM, typeof(object), expArgs);
         }
@@ -925,11 +943,12 @@ namespace ExpressionEvaluator.Parser
             var expArgs = new List<Expression>() { le, re };
 
 
-            var binderM = Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, le.Type, new CSharpArgumentInfo[]
-		            {
-			            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-			            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-		            });
+            var binderM = Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, le.Type,
+                                                 new CSharpArgumentInfo[]
+                                                     {
+                                                         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                                                         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+                                                     });
 
             return Expression.Dynamic(binderM, typeof(object), expArgs);
         }
@@ -972,5 +991,65 @@ namespace ExpressionEvaluator.Parser
             }
         }
 
+        public static Expression For(ParameterList parameterList, MultiStatement initializer, Expression condition, List<Expression> iterator, Expression body)
+        {
+            var initializations = new List<Expression>();
+            var exitLabel = Expression.Label();
+            var localVars = new List<ParameterExpression>();
+            var loopbody = new List<Expression>();
+
+            if (initializer.GetType() == typeof(LocalVariableDeclaration))
+            {
+                var t = (LocalVariableDeclaration)initializer;
+                localVars.AddRange(t.Variables);
+                initializations.AddRange(t.Initializers);
+                parameterList.Add(t.Variables);
+            }
+
+            var loopblock = new List<Expression>();
+            loopblock.Add(Expression.IfThen(condition, Expression.Goto(exitLabel)));
+            loopblock.Add(body);
+            loopblock.AddRange(iterator);
+
+            var loop = Expression.Loop(Expression.Block(loopblock));
+
+            loopbody.AddRange(initializations);
+            loopbody.Add(loop);
+            loopbody.Add(Expression.Label(exitLabel));
+            var block = Expression.Block(localVars, body);
+            return block;
+        }
+
+        public static Expression DoWhile(Expression body, Expression boolean)
+        {
+            var breakTarget = Expression.Label();
+            var block = Expression.Block(
+                new Expression[] {
+                    Expression.Loop(
+                        Expression.Block(
+                            new Expression[] {
+                                body,
+                                Expression.IfThen(boolean,Expression.Goto(breakTarget))
+                            })),
+                    Expression.Label(breakTarget)
+                });
+            return block;
+        }
+
+        public static Expression While(Expression boolean, Expression body)
+        {
+            var breakTarget = Expression.Label();
+            var block = Expression.Block(
+                new Expression[] {
+                    Expression.Loop(
+                        Expression.Block(
+                            new Expression[] {
+                                Expression.IfThen(boolean,Expression.Goto(breakTarget)),
+                                body
+                            })),
+                    Expression.Label(breakTarget)
+                });
+            return block;
+        }
     }
 }

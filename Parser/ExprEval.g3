@@ -1230,9 +1230,6 @@ public expression_statement returns [Expression value]:
     expression   ';' { $value = $expression.value; } ;
 
 // TODO: should be assignment, call, increment, decrement, and new object expressions
-public statement_expression returns [Expression value]:
-    expression { } 
-    ;
 public selection_statement returns [Expression value]:
     if_statement { $value = $if_statement.value; }
     | switch_statement  { $value = $switch_statement.value; } ;
@@ -1276,13 +1273,16 @@ public switch_statement returns [Expression value]:
 	};
 public switch_block returns [List<SwitchCase> value]:
     '{'   switch_sections?  '}' { $value = $switch_sections.value; };
+
 public switch_sections returns [List<SwitchCase> value]
 @init{
 	$value = new List<SwitchCase>();
 }:
     (switch_section { $value.Add($switch_section.value); } )+ ;
+
 public switch_section returns [SwitchCase value]:
     switch_labels   statement_list { $value = Expression.SwitchCase(Expression.Block($statement_list.value.Select(x => x.Expression)), $switch_labels.value); } ;
+
 public switch_labels returns [List<Expression> value]
 @init{
 	$value = new List<Expression>();
@@ -1291,30 +1291,43 @@ public switch_labels returns [List<Expression> value]
 public switch_label returns [Expression value]:
     ('case'   constant_expression   ':') { $value = $constant_expression.value; }
     | ('default'   ':') { $value = Expression.Empty(); } ; 
+
 public iteration_statement returns [Expression value]:
-    while_statement
-    | do_statement
+    while_statement { $value = $while_statement.value; }
+    | do_statement { $value = $do_statement.value; }
     | for_statement { $value = $for_statement.value; }
     | foreach_statement { $value = $foreach_statement.value; };
-public while_statement:
+
+public while_statement returns [Expression value]:
     'while'   '('   boolean_expression   ')'   embedded_statement ;
-public do_statement:
+
+public do_statement returns [Expression value]:
     'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' ;
+
 public for_statement returns [Expression value]:
     'for'   '('   for_initializer?   ';'   for_condition?   ';'   for_iterator?   ')'   embedded_statement ;
-public for_initializer:
+
+public for_initializer returns [Expression value]:
     (local_variable_declaration) => local_variable_declaration
     | statement_expression_list 
     ;
+
 public for_condition returns [Expression value]:
-    boolean_expression ;
+    boolean_expression { $value = $boolean_expression.value; };
+
 public for_iterator:
     statement_expression_list ;
-public statement_expression_list:
-    statement_expression (',' statement_expression)* ;
+
+public statement_expression_list returns [StatementList value] @init{ $value = new StatementList(); }:
+    first=statement_expression { $value.Add($first.value); } (',' succeeding=statement_expression { $value.Add($succeeding.value); } )* ;
+
+public statement_expression returns [Expression value]:
+    expression { $value = $expression.value; } ;
+
 public foreach_statement returns [Expression value]:
     'foreach'   '('   local_variable_type   identifier   'in'   expression   ')'   embedded_statement ;
-public jump_statement:
+
+public jump_statement returns [Expression value]:
     break_statement
     | continue_statement
     | goto_statement
