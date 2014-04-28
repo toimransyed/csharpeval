@@ -1298,11 +1298,11 @@ public iteration_statement returns [Expression value]:
     | for_statement { $value = $for_statement.value; }
     | foreach_statement { $value = $foreach_statement.value; };
 
-public while_statement returns [Expression value]:
-    'while'   '('   boolean_expression   ')'   embedded_statement ;
+public while_statement returns [Expression value] @init{ var breakTarget = Expression.Label(); }:
+    'while' '('   boolean_expression   ')'   embedded_statement { $value = ExpressionHelper.While(breakTarget, $boolean_expression.value, $embedded_statement.value); };
 
 public do_statement returns [Expression value]:
-    'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' ;
+    'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' { $value = ExpressionHelper.DoWhile($embedded_statement.value, $boolean_expression.value); };
 
 public for_statement returns [Expression value]:
     'for'   '('   for_initializer?   ';'   for_condition?   ';'   for_iterator?   ')'   embedded_statement ;

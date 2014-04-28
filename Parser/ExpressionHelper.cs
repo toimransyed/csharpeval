@@ -1036,15 +1036,14 @@ namespace ExpressionEvaluator.Parser
             return block;
         }
 
-        public static Expression While(Expression boolean, Expression body)
+        public static Expression While(LabelTarget breakTarget, Expression boolean, Expression body)
         {
-            var breakTarget = Expression.Label();
             var block = Expression.Block(
                 new Expression[] {
                     Expression.Loop(
                         Expression.Block(
                             new Expression[] {
-                                Expression.IfThen(boolean,Expression.Goto(breakTarget)),
+                                Expression.IfThen(Expression.Not(boolean),Expression.Goto(breakTarget)),
                                 body
                             })),
                     Expression.Label(breakTarget)

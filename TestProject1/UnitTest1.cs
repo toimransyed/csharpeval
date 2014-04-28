@@ -312,6 +312,39 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
+        public void LocalImplicitVariables()
+        {
+            var registry = new TypeRegistry();
+
+            object obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            var cc = new CompiledExpression() { StringToParse = "var x = new objHolder(); x.number = 3; x.number++; var varname = 23; varname++; obj.number = varname -  x.number;", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            var result = cc.Eval();
+        }
+
+        [TestMethod]
+        public void WhileLoop()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            var cc = new CompiledExpression() { StringToParse = "while (obj.number < 10) { obj.number++; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            var result = cc.Eval();
+            Assert.AreEqual(obj.number, 10);
+        }
+
+        [TestMethod]
         public void ScopeCompileTypedResultTypedParam()
         {
             var scope = new ClassA() { x = 1 };
@@ -329,6 +362,21 @@ namespace ExpressionEvaluator.Tests
 
 
     }
+
+    public class objHolder
+    {
+        public bool result { get; set; }
+        public NumEnum value { get; set; }
+        public int number { get; set; }
+    }
+
+    public enum NumEnum
+    {
+        One = 1,
+        Two = 2,
+        Three = 3
+    }
+
 
     public class ClassA
     {
