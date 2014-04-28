@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
-    public class TypeVariable
+    internal class TypeVariable
     {
         public TypeVariable()
         {

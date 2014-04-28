@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using Antlr.Runtime;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
     [Serializable]
-    public class ExpressionParseException : Exception
+    internal class ExpressionParseException : Exception
     {
         private ITokenStream _tokenStream;
 

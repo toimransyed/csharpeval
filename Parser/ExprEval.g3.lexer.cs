@@ -1,8 +1,7 @@
-﻿using System;
-using System.Linq.Expressions;
+using System;
 using Antlr.Runtime;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
     public partial class ExprEvalLexer
     {

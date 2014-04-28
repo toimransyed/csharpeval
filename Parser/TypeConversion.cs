@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser
 {
-    class TypeConversion
+    internal class TypeConversion
     {
         readonly Dictionary<Type, int> _typePrecedence = null;
         static readonly TypeConversion Instance = new TypeConversion();

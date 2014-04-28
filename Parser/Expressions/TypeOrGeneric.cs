@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace ExpressionEvaluator
+namespace ExpressionEvaluator.Parser.Expressions
 {
     public class TypeOrGeneric
     {

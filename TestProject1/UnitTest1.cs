@@ -236,6 +236,32 @@ namespace ExpressionEvaluator.Tests
             Assert.IsTrue(Convert.ToInt32(ret) == 0);
         }
 
+        public class BoxedDecimal
+        {
+            public bool IsTriggered { get; set; }
+            public bool CanWithdraw { get; set; }
+            public decimal AmountToWithdraw { get; set; }
+        }
+
+        [TestMethod]
+        public void DynamicsUnboxingTest()
+        {
+            var bd = new BoxedDecimal() { CanWithdraw = false, AmountToWithdraw = 12m };
+            dynamic e = bd;
+
+            var isOverDrawn = e.AmountToWithdraw > 10m;
+            Assert.IsTrue(isOverDrawn);
+
+            var t = new TypeRegistry();
+            t.RegisterSymbol("e", e);
+            var compiler = new CompiledExpression { TypeRegistry = t, StringToParse = "e.AmountToWithdraw > 10m" };
+            compiler.Compile();
+            var result = (bool)compiler.Eval();
+            Assert.IsTrue(result);
+
+        }
+
+
         [TestMethod]
         public void DynamicsTest()
         {

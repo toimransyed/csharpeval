@@ -1,4 +1,4 @@
-﻿//
+//
 //   Original grammar from the Antlr C# grammar project (https://antlrcsharp.codeplex.com) by anbrad
 //   Modified for generating LINQ Expressions for the C# Expression Evaluator project (https://csharpeval.codeplex.com) by RupertAvery 2014-03-11
 //
@@ -9,8 +9,8 @@ options {
 	backtrack = true;
 }
 
-@lexer::namespace{ExpressionEvaluator}
-@parser::namespace{ExpressionEvaluator}
+@lexer::namespace{ExpressionEvaluator.Parser}
+@parser::namespace{ExpressionEvaluator.Parser}
 
 @lexer::header       
 {
@@ -25,6 +25,7 @@ using Debug = System.Diagnostics.Debug;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using ExpressionEvaluator.Parser.Expressions;
 }
 
 @lexer::members {
@@ -156,30 +157,30 @@ public primary_expression returns [Expression value]
 		}  
 		(primary_expression_part
 		{ 
-			if($primary_expression_part.value.GetType() == typeof(AccessIdentifierToken))
+			if($primary_expression_part.value.GetType() == typeof(AccessIdentifier))
 			{
 				if (input.LT(1).Text == "(")
 				{
-                    method = ((AccessIdentifierToken)$primary_expression_part.value).Value;
+                    method = ((AccessIdentifier)$primary_expression_part.value).Value;
                 }
 				else
 				{
-                    $value = ExpressionHelper.GetProperty($value, ((AccessIdentifierToken)$primary_expression_part.value).Value.Identifier);
+                    $value = ExpressionHelper.GetProperty($value, ((AccessIdentifier)$primary_expression_part.value).Value.Identifier);
 					if($value==null)
 					{
 						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
 					}
                 }
 			}
-			else if($primary_expression_part.value.GetType() == typeof(BracketsToken))
+			else if($primary_expression_part.value.GetType() == typeof(Brackets))
 			{
-				$value = ExpressionHelper.GetPropertyIndex($value, ((BracketsToken)$primary_expression_part.value).Values);
+				$value = ExpressionHelper.GetPropertyIndex($value, ((Brackets)$primary_expression_part.value).Values);
 			}
-			else if($primary_expression_part.value.GetType() == typeof(ArgumentsToken))
+			else if($primary_expression_part.value.GetType() == typeof(Arguments))
 			{
 				if(method!=null)
 				{
-					$value = ExpressionHelper.GetMethod($value, method, ((ArgumentsToken)$primary_expression_part.value).Values, IsCall);
+					$value = ExpressionHelper.GetMethod($value, method, ((Arguments)$primary_expression_part.value).Values, IsCall);
 					if($value==null)
 					{
 						throw new ExpressionParseException(string.Format("Cannot resolve symbol \"{0}\"", input.LT(-1).Text), input);
@@ -187,14 +188,14 @@ public primary_expression returns [Expression value]
 				}
 				else
 				{
-					// $value = GetMethod($value, membername, ((ArgumentsToken)$primary_expression_part.value).Values);
+					// $value = GetMethod($value, membername, ((Arguments)$primary_expression_part.value).Values);
 				}
 			}
-			else if($primary_expression_part.value.GetType() == typeof(PostIncrementToken))
+			else if($primary_expression_part.value.GetType() == typeof(PostIncrement))
 			{
 			    $value = Expression.Assign(value, Expression.Increment($value));
 			}
-			else if($primary_expression_part.value.GetType() == typeof(PostDecrementToken))
+			else if($primary_expression_part.value.GetType() == typeof(PostDecrement))
 			{
 			    $value = Expression.Assign(value, Expression.Decrement($value));
 			}
@@ -226,33 +227,33 @@ public primary_expression_start returns [Expression value]:
     | literal { $value = $literal.value; }
     ;
 
-public primary_expression_part returns [PrimaryExpressionPartToken value]:
+public primary_expression_part returns [PrimaryExpressionPart value]:
 // fake an access identifer if Scope is set
-    {fakedot}?=> type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; }
+    {fakedot}?=> type_or_generic { $value = new AccessIdentifier() { Value = $type_or_generic.value }; }
     | access_identifier { $value = $access_identifier.value; }
     | brackets_or_arguments { $value = $brackets_or_arguments.value; }
-    | '++' { $value = new PostIncrementToken(); }
-    | '--' { $value = new PostDecrementToken(); } ;
+    | '++' { $value = new PostIncrement(); }
+    | '--' { $value = new PostDecrement(); } ;
 
-public access_identifier returns [AccessIdentifierToken value]:
-    access_operator   type_or_generic { $value = new AccessIdentifierToken() { Value = $type_or_generic.value }; };
+public access_identifier returns [AccessIdentifier value]:
+    access_operator   type_or_generic { $value = new AccessIdentifier() { Value = $type_or_generic.value }; };
 
 public access_operator:
     '.' |  '->' ;
 
-public brackets_or_arguments returns [ExpressionListToken value]:
+public brackets_or_arguments returns [ExpressionList value]:
     brackets { $value = $brackets.value; }
 	| arguments { $value = $arguments.value; } ;
 
-public brackets returns [BracketsToken value]:
-    '['   (expression_list { $value = new BracketsToken() { Values = $expression_list.values }; })?   ']' ;    
+public brackets returns [Brackets value]:
+    '['   (expression_list { $value = new Brackets() { Values = $expression_list.values }; })?   ']' ;    
 
 public paren_expression returns [Expression value]:    
     '('   expression   ')' { $value = $expression.value; } ;
 
-public arguments returns [ArgumentsToken value]
+public arguments returns [Arguments value]
 @init{
-	$value = new ArgumentsToken() { Values = new List<Expression>() };
+	$value = new Arguments() { Values = new List<Expression>() };
 }: 
     '('   (argument_list {  $value.Values = $argument_list.values; })?   ')' ;
 
@@ -279,8 +280,8 @@ public ref_variable_reference:
                                                                                                     // SomeFunc(ref (int) foo)
         | variable_reference);    // SomeFunc(ref foo)
 // lvalue
-public variable_reference:
-    expression;
+public variable_reference returns [Expression value]:
+    expression  { $value = $expression.value; } ;
 public rank_specifiers: 
     rank_specifier+ ;        
 public rank_specifier: 
@@ -306,7 +307,7 @@ public primary_or_array_creation_expression returns [Expression value]:
     | '(' primary_expression ')' { $value = $primary_expression.value; }
 	;
 // new Type[2] { }
-public array_creation_expression:
+public array_creation_expression returns [Expression value]:
     'new'   
         (type   ('['   expression_list   ']'   
                     ( rank_specifiers?   array_initializer?    // new int[4]
@@ -1229,9 +1230,6 @@ public expression_statement returns [Expression value]:
     expression   ';' { $value = $expression.value; } ;
 
 // TODO: should be assignment, call, increment, decrement, and new object expressions
-public statement_expression returns [Expression value]:
-    expression { } 
-    ;
 public selection_statement returns [Expression value]:
     if_statement { $value = $if_statement.value; }
     | switch_statement  { $value = $switch_statement.value; } ;
@@ -1275,13 +1273,16 @@ public switch_statement returns [Expression value]:
 	};
 public switch_block returns [List<SwitchCase> value]:
     '{'   switch_sections?  '}' { $value = $switch_sections.value; };
+
 public switch_sections returns [List<SwitchCase> value]
 @init{
 	$value = new List<SwitchCase>();
 }:
     (switch_section { $value.Add($switch_section.value); } )+ ;
+
 public switch_section returns [SwitchCase value]:
     switch_labels   statement_list { $value = Expression.SwitchCase(Expression.Block($statement_list.value.Select(x => x.Expression)), $switch_labels.value); } ;
+
 public switch_labels returns [List<Expression> value]
 @init{
 	$value = new List<Expression>();
@@ -1290,30 +1291,43 @@ public switch_labels returns [List<Expression> value]
 public switch_label returns [Expression value]:
     ('case'   constant_expression   ':') { $value = $constant_expression.value; }
     | ('default'   ':') { $value = Expression.Empty(); } ; 
+
 public iteration_statement returns [Expression value]:
-    while_statement
-    | do_statement
+    while_statement { $value = $while_statement.value; }
+    | do_statement { $value = $do_statement.value; }
     | for_statement { $value = $for_statement.value; }
     | foreach_statement { $value = $foreach_statement.value; };
-public while_statement:
+
+public while_statement returns [Expression value]:
     'while'   '('   boolean_expression   ')'   embedded_statement ;
-public do_statement:
+
+public do_statement returns [Expression value]:
     'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' ;
+
 public for_statement returns [Expression value]:
     'for'   '('   for_initializer?   ';'   for_condition?   ';'   for_iterator?   ')'   embedded_statement ;
-public for_initializer:
+
+public for_initializer returns [Expression value]:
     (local_variable_declaration) => local_variable_declaration
     | statement_expression_list 
     ;
+
 public for_condition returns [Expression value]:
-    boolean_expression ;
+    boolean_expression { $value = $boolean_expression.value; };
+
 public for_iterator:
     statement_expression_list ;
-public statement_expression_list:
-    statement_expression (',' statement_expression)* ;
+
+public statement_expression_list returns [StatementList value] @init{ $value = new StatementList(); }:
+    first=statement_expression { $value.Add($first.value); } (',' succeeding=statement_expression { $value.Add($succeeding.value); } )* ;
+
+public statement_expression returns [Expression value]:
+    expression { $value = $expression.value; } ;
+
 public foreach_statement returns [Expression value]:
     'foreach'   '('   local_variable_type   identifier   'in'   expression   ')'   embedded_statement ;
-public jump_statement:
+
+public jump_statement returns [Expression value]:
     break_statement
     | continue_statement
     | goto_statement
