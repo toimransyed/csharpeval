@@ -285,6 +285,23 @@ namespace ExpressionEvaluator.Tests
             Assert.AreEqual(a.y, a.z);
         }
 
+        [TestMethod]
+        public void ScopeCompileTypedResultTypedParam()
+        {
+            var scope = new ClassA() { x = 1 };
+            var target = new CompiledExpression<int>("x");
+            target.ScopeCompile<ClassA>();
+        }
+
+        [TestMethod]
+        public void ScopeCompileTypedResultObjectParam()
+        {
+            var scope = new ClassA() { x = 1 };
+            var target = new CompiledExpression<int>("1");
+            target.ScopeCompile();
+        }
+
+
     }
 
     public class ClassA

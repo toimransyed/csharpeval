@@ -45,7 +45,7 @@ namespace ExpressionEvaluator
             BuildTree(null, false);
         }
 
-        protected Expression WrapExpression(Expression source, bool castToObject = true)
+        protected Expression WrapExpression(Expression source, bool castToObject)
         {
             if (source.Type == typeof(void))
             {
