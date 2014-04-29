@@ -365,6 +365,44 @@ namespace ExpressionEvaluator.Tests
             Assert.AreEqual(obj.number2, obj.number);
         }
 
+        [TestMethod]
+        public void ForLoopWithMultipleIterators()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            for (int i = 0, j = 0; i < 10; i++, j++) { obj.number2 = j; }
+
+            var cc = new CompiledExpression() { StringToParse = "for(int i = 0, j = 0; i < 10; i++, j++) { obj.number = j; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(9, obj.number);
+            Assert.AreEqual(obj.number2, obj.number);
+        }
+
+        [TestMethod]
+        public void ForEachLoop()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { iterator = new List<string>() { "Hello", "there", "world" } };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("Debug", typeof(Debug)); 
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            //for (int i = 0, j = 0; i < 10; i++, j++) { obj.number2 = j; }
+
+            var cc = new CompiledExpression() { StringToParse = "foreach(string word in obj.iterator) { Debug.WriteLine(word); }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+        }
 
         [TestMethod]
         public void ForLoopWithContinue()
@@ -468,6 +506,7 @@ namespace ExpressionEvaluator.Tests
         public NumEnum value { get; set; }
         public int number { get; set; }
         public int number2 { get; set; }
+        public IEnumerable<string> iterator;
     }
 
     public enum NumEnum

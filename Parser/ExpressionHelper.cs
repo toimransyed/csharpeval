@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
@@ -991,6 +992,24 @@ namespace ExpressionEvaluator.Parser
             }
         }
 
+        public static Expression ForEach(LabelTarget exitLabel, LabelTarget continueLabel, ParameterExpression parameter, Expression iterator, Expression body)
+        {
+            // Not Working yet!!!
+            var enumerator = GetMethod(iterator, new TypeOrGeneric() {Identifier = "GetEnumerator"}, new List<Expression>());
+            var condition = GetMethod(enumerator, new TypeOrGeneric() { Identifier = "MoveNext" }, new List<Expression>());
+            var expressions = new List<Expression>();
+
+            if (body.NodeType == ExpressionType.Block)
+            {
+                expressions.Add(Expression.Assign(parameter, GetProperty(enumerator, "Current")));
+            }
+
+            expressions.AddRange(((BlockExpression)body).Expressions);
+            
+            var newbody = Expression.Block(expressions);
+            return While(exitLabel, continueLabel, condition, newbody);
+        }
+
         public static Expression For(LabelTarget exitLabel, LabelTarget continueLabel, MultiStatement initializer, Expression condition, StatementList iterator, Expression body)
         {
             var initializations = new List<Expression>();
@@ -1033,7 +1052,7 @@ namespace ExpressionEvaluator.Parser
             return block;
         }
 
-        public static Expression DoWhile(LabelTarget breakTarget, Expression body, Expression boolean)
+        public static Expression DoWhile(LabelTarget breakTarget, LabelTarget continueLabel, Expression body, Expression boolean)
         {
             var block = Expression.Block(
                 new Expression[] {
@@ -1041,6 +1060,7 @@ namespace ExpressionEvaluator.Parser
                         Expression.Block(
                             new Expression[] {
                                 body,
+                                Expression.Label(continueLabel),
                                 Expression.IfThen(boolean,Expression.Goto(breakTarget))
                             })),
                     Expression.Label(breakTarget)
@@ -1048,7 +1068,7 @@ namespace ExpressionEvaluator.Parser
             return block;
         }
 
-        public static Expression While(LabelTarget breakTarget, Expression boolean, Expression body)
+        public static Expression While(LabelTarget breakTarget, LabelTarget continueLabel, Expression boolean, Expression body)
         {
             var block = Expression.Block(
                 new Expression[] {
@@ -1056,7 +1076,8 @@ namespace ExpressionEvaluator.Parser
                         Expression.Block(
                             new Expression[] {
                                 Expression.IfThen(Expression.Not(boolean),Expression.Goto(breakTarget)),
-                                body
+                                body,
+                                Expression.Label(continueLabel)
                             })),
                     Expression.Label(breakTarget)
                 });
