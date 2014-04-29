@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Text;
 using System.Collections.Generic;
@@ -70,14 +71,14 @@ namespace ExpressionEvaluator.Tests
         //
         #endregion
 
-        [TestMethod]
-        [ExpectedException(typeof(Exception))]
-        public void ParseInvalidNumericThrowsException()
-        {
-            var str = "2.55 + 32";
-            var c = new CompiledExpression(str);
-            var ret = c.Eval();
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(Exception))]
+        //public void ParseInvalidNumericThrowsException()
+        //{
+        //    var str = "2.55 + 32";
+        //    var c = new CompiledExpression(str);
+        //    var ret = c.Eval();
+        //}
 
         [TestMethod]
         public void UnderscoreVariables()
@@ -304,7 +305,7 @@ namespace ExpressionEvaluator.Tests
             var a = new ClassA() { x = 1 };
             var t = new TypeRegistry();
             t.RegisterSymbol("a", a);
-            var p = new CompiledExpression { StringToParse = "if(a.x == 1) a.y = 2; else { a.y = 3; } a.z = a.y;", TypeRegistry = t };
+            var p = new CompiledExpression { StringToParse = "if (a.x == 1) a.y = 2; else { a.y = 3; } a.z = a.y;", TypeRegistry = t };
             p.ExpressionType = CompiledExpressionType.StatementList;
             var f = p.Eval();
             Assert.AreEqual(a.y, 2);
@@ -340,8 +341,106 @@ namespace ExpressionEvaluator.Tests
 
             var cc = new CompiledExpression() { StringToParse = "while (obj.number < 10) { obj.number++; }", TypeRegistry = registry };
             cc.ExpressionType = CompiledExpressionType.StatementList;
-            var result = cc.Eval();
-            Assert.AreEqual(obj.number, 10);
+            cc.Eval();
+            Assert.AreEqual(10, obj.number);
+        }
+
+
+        [TestMethod]
+        public void ForLoop()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+            
+            for (var i = 0; i < 10; i++) { obj.number2++; }
+
+            var cc = new CompiledExpression() { StringToParse = "for(var i = 0; i < 10; i++) { obj.number++; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(obj.number2, obj.number);
+        }
+
+
+        [TestMethod]
+        public void ForLoopWithContinue()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+            var obj2 = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+            
+            for (var i = 0; i < 10; i++) { obj2.number++; if (i > 5) continue; obj2.number2++; }
+
+            var cc = new CompiledExpression() { StringToParse = "for(var i = 0; i < 10; i++) { obj.number++; if(i > 5) continue; obj.number2++; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(obj2.number, obj.number);
+            Assert.AreEqual(obj2.number2, obj.number2);
+        }
+
+        [TestMethod]
+        public void ForLoopWithBreak()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+            var obj2 = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            for (var i = 0; i < 10; i++) { obj2.number++; if (i > 5) break; obj2.number2++; }
+
+            var cc = new CompiledExpression() { StringToParse = "for(var i = 0; i < 10; i++) { obj.number++; if(i > 5) break; obj.number2++; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(obj2.number, obj.number);
+            Assert.AreEqual(obj2.number2, obj.number2);
+        }
+
+        [TestMethod]
+        public void WhileLoopWithBreak()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            var cc = new CompiledExpression() { StringToParse = "while (obj.number < 10) { obj.number++; if(obj.number == 5) break; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(5, obj.number);
+        }
+
+        [TestMethod]
+        public void NestedWhileLoopWithBreak()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { result = false, value = NumEnum.Two };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("Debug", typeof(Debug));
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+            var cc = new CompiledExpression() { StringToParse = "while (obj.number < 10) { Debug.WriteLine((object)obj.number); obj.number++; while (obj.number2 < 10) { Debug.WriteLine((object)obj.number2); obj.number2++; if(obj.number2 == 5) break;  }  if(obj.number == 5) break; }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+            Assert.AreEqual(5, obj.number);
+            Assert.AreEqual(10, obj.number2);
         }
 
         [TestMethod]
@@ -368,6 +467,7 @@ namespace ExpressionEvaluator.Tests
         public bool result { get; set; }
         public NumEnum value { get; set; }
         public int number { get; set; }
+        public int number2 { get; set; }
     }
 
     public enum NumEnum

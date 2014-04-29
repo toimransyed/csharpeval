@@ -9,6 +9,9 @@ namespace ExpressionEvaluator.Parser
 {
     public partial class ExprEvalParser
     {
+        private Stack<LabelTarget> _breakContext = new Stack<LabelTarget>();
+        private Stack<LabelTarget> _continueContext = new Stack<LabelTarget>(); 
+
         public Expression Scope { get; set; }
         public bool IsCall { get; set; }
 
@@ -71,21 +74,27 @@ namespace ExpressionEvaluator.Parser
 
     public class ParameterList
     {
-        private List<ParameterExpression> _parameters = new List<ParameterExpression>();
+        private readonly List<ParameterExpression> _parameters = new List<ParameterExpression>();
+
+        public void Add(ParameterExpression parameter)
+        {
+            ParameterExpression p;
+            if (!ParameterLookup.TryGetValue(parameter.Name, out p))
+            {
+                _parameters.Add(parameter);
+            }
+            else
+            {
+                throw new Exception(string.Format("Parameter \"{0}\" conflicts with an existing parameter", parameter.Name));
+            }
+
+        }
 
         public void Add(List<ParameterExpression> list)
         {
             foreach (var parameterExpression in list)
             {
-                ParameterExpression p;
-                if (!ParameterLookup.TryGetValue(parameterExpression.Name, out p))
-                {
-                    _parameters.Add(parameterExpression);
-                }
-                else
-                {
-                    throw new Exception(string.Format("Parameter \"{0}\" conflicts with an existing parameter", parameterExpression.Name));
-                }
+                Add(parameterExpression);
             }
         }
 

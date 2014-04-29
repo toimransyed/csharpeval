@@ -991,38 +991,50 @@ namespace ExpressionEvaluator.Parser
             }
         }
 
-        public static Expression For(ParameterList parameterList, MultiStatement initializer, Expression condition, List<Expression> iterator, Expression body)
+        public static Expression For(LabelTarget exitLabel, LabelTarget continueLabel, MultiStatement initializer, Expression condition, StatementList iterator, Expression body)
         {
             var initializations = new List<Expression>();
-            var exitLabel = Expression.Label();
             var localVars = new List<ParameterExpression>();
             var loopbody = new List<Expression>();
 
-            if (initializer.GetType() == typeof(LocalVariableDeclaration))
+            if (initializer != null)
             {
-                var t = (LocalVariableDeclaration)initializer;
-                localVars.AddRange(t.Variables);
-                initializations.AddRange(t.Initializers);
-                parameterList.Add(t.Variables);
+                if (initializer.GetType() == typeof(LocalVariableDeclaration))
+                {
+                    var t = (LocalVariableDeclaration)initializer;
+                    localVars.AddRange(t.Variables);
+                    initializations.AddRange(t.Initializers);
+                }
             }
 
+
             var loopblock = new List<Expression>();
-            loopblock.Add(Expression.IfThen(condition, Expression.Goto(exitLabel)));
+            
+            if (condition != null)
+            {
+                loopblock.Add(Expression.IfThen(Expression.Not(condition), Expression.Goto(exitLabel)));
+            }
+            
             loopblock.Add(body);
-            loopblock.AddRange(iterator);
+            loopblock.Add(Expression.Label(continueLabel));
+
+            if (iterator != null)
+            {
+                loopblock.AddRange(iterator.Statements.Select(x => x.Expression));
+            }
 
             var loop = Expression.Loop(Expression.Block(loopblock));
 
             loopbody.AddRange(initializations);
             loopbody.Add(loop);
             loopbody.Add(Expression.Label(exitLabel));
-            var block = Expression.Block(localVars, body);
+
+            var block = Expression.Block(localVars, loopbody);
             return block;
         }
 
-        public static Expression DoWhile(Expression body, Expression boolean)
+        public static Expression DoWhile(LabelTarget breakTarget, Expression body, Expression boolean)
         {
-            var breakTarget = Expression.Label();
             var block = Expression.Block(
                 new Expression[] {
                     Expression.Loop(
