@@ -481,11 +481,19 @@ namespace ExpressionEvaluator.Parser
         private static Expression OldMethodHandler(Type type, Expression instance, TypeOrGeneric member,
                                                    List<Expression> args)
         {
-            var argTypes = args.Select(x => x.Type).ToList();
+            var argTypes = args.Select(x => x.Type).ToArray();
             var membername = member.Identifier;
 
             // Look for an exact match
-            var methodInfo = type.GetMethod(membername, argTypes.ToArray());
+            var methodInfo = type.GetMethod(membername, argTypes);
+
+            if (methodInfo == null)
+            {
+                methodInfo = type.GetInterfaces()
+                  .Where(i => i.GetMethod(membername, argTypes) != null)
+                  .Select(m => m.GetMethod(membername, argTypes))
+                  .FirstOrDefault();
+            }
 
             if (methodInfo != null)
             {
@@ -996,18 +1004,34 @@ namespace ExpressionEvaluator.Parser
         {
             // Not Working yet!!!
             var enumerator = GetMethod(iterator, new TypeOrGeneric() {Identifier = "GetEnumerator"}, new List<Expression>());
-            var condition = GetMethod(enumerator, new TypeOrGeneric() { Identifier = "MoveNext" }, new List<Expression>());
+
+            var enumParam = Expression.Variable(enumerator.Type);
+            var assign = Expression.Assign(enumParam, enumerator);
+
+            var localVar = new LocalVariableDeclaration();
+            localVar.Variables.Add(enumParam);
+            localVar.Initializers.Add(assign);
+
+            var condition = GetMethod(enumParam, new TypeOrGeneric() { Identifier = "MoveNext" }, new List<Expression>());
             var expressions = new List<Expression>();
+            var variables = new List<ParameterExpression>();
+
+            variables.Add(parameter);
 
             if (body.NodeType == ExpressionType.Block)
             {
-                expressions.Add(Expression.Assign(parameter, GetProperty(enumerator, "Current")));
+                expressions.Add(Expression.Assign(parameter, GetProperty(enumParam, "Current")));
+                variables.AddRange(((BlockExpression)body).Variables);
+                expressions.AddRange(((BlockExpression)body).Expressions);
+            }
+            else
+            {
+                expressions.Add(body);
             }
 
-            expressions.AddRange(((BlockExpression)body).Expressions);
-            
-            var newbody = Expression.Block(expressions);
-            return While(exitLabel, continueLabel, condition, newbody);
+
+            var newbody = Expression.Block(variables, expressions);
+            return While(exitLabel, continueLabel, localVar, condition, newbody);
         }
 
         public static Expression For(LabelTarget exitLabel, LabelTarget continueLabel, MultiStatement initializer, Expression condition, StatementList iterator, Expression body)
@@ -1068,20 +1092,27 @@ namespace ExpressionEvaluator.Parser
             return block;
         }
 
-        public static Expression While(LabelTarget breakTarget, LabelTarget continueLabel, Expression boolean, Expression body)
+        public static Expression While(LabelTarget breakTarget, LabelTarget continueLabel, LocalVariableDeclaration setup, Expression boolean, Expression body)
         {
-            var block = Expression.Block(
-                new Expression[] {
-                    Expression.Loop(
+            var loopBody = new List<Expression>();
+            if (setup != null)
+            {
+                loopBody.AddRange(setup.Initializers);
+            }
+            loopBody.Add(Expression.Loop(
                         Expression.Block(
                             new Expression[] {
                                 Expression.IfThen(Expression.Not(boolean),Expression.Goto(breakTarget)),
                                 body,
                                 Expression.Label(continueLabel)
-                            })),
-                    Expression.Label(breakTarget)
-                });
-            return block;
+                            })));
+            loopBody.Add(Expression.Label(breakTarget));
+            if (setup != null)
+            {
+
+                return Expression.Block(setup.Variables, loopBody);
+            }
+            return  Expression.Block(loopBody);
         }
     }
 }

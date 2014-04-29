@@ -397,9 +397,15 @@ namespace ExpressionEvaluator.Tests
             registry.RegisterType("objHolder", typeof(objHolder));
             registry.RegisterDefaultTypes();
 
-            //for (int i = 0, j = 0; i < 10; i++, j++) { obj.number2 = j; }
+            //var iterator = new List<string>() { "Hello", "there", "world" };
+            //var enumerator = iterator.GetEnumerator();
+            //while (enumerator.MoveNext())
+            //{
+            //    var word = enumerator.Current;
+            //    Debug.WriteLine(word);
+            //}
 
-            var cc = new CompiledExpression() { StringToParse = "foreach(string word in obj.iterator) { Debug.WriteLine(word); }", TypeRegistry = registry };
+            var cc = new CompiledExpression() { StringToParse = "foreach(var word in obj.iterator) { Debug.WriteLine(word); }", TypeRegistry = registry };
             cc.ExpressionType = CompiledExpressionType.StatementList;
             cc.Eval();
         }

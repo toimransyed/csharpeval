@@ -1300,7 +1300,7 @@ public while_statement returns [Expression value]
 @init{ var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
 @after{ _continueContext.Pop(); _breakContext.Pop(); }:
     'while' '('   boolean_expression   ')'   embedded_statement 
-	{ $value = ExpressionHelper.While(breakTarget, continueTarget, $boolean_expression.value, $embedded_statement.value); };
+	{ $value = ExpressionHelper.While(breakTarget, continueTarget, null, $boolean_expression.value, $embedded_statement.value); };
 
 public do_statement returns [Expression value]
 @init{ var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
@@ -1317,12 +1317,17 @@ public for_statement returns [Expression value]
 public foreach_statement returns [Expression value]
 @init{ ParameterExpression parameter = null; var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
 @after{ _continueContext.Pop(); _breakContext.Pop(); }:
-    'foreach'   '('   local_variable_type   identifier {
+    'foreach'   '('   local_variable_type   identifier  'in'   expression   ')' 
+	 {
 		var typeName = $local_variable_type.value.Identifier;
 		Type type = null;
 
 		if(typeName == "var")
 		{
+            if ($expression.value.Type.IsGenericType)
+            {
+                type = $expression.value.Type.GetGenericArguments()[0];
+            }
 		}
 		else
 		{
@@ -1333,7 +1338,8 @@ public foreach_statement returns [Expression value]
 
 		ParameterList.Add(parameter);
 	
-	}  'in'   expression   ')'   embedded_statement 
+	}
+	embedded_statement 
 	{ 
 		$value = ExpressionHelper.ForEach(breakTarget, continueTarget, parameter, $expression.value, $embedded_statement.value); 
 	};
