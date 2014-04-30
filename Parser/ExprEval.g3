@@ -703,11 +703,13 @@ public lambda_expression returns [Expression value]:
 		$value = Expression.Lambda($anonymous_function_body.value, $anonymous_function_signature.value.ToArray()); 
 		ParameterList.Remove($anonymous_function_signature.value); 
 	};
+
 public anonymous_function_signature returns [List<ParameterExpression> value]:
     '('    (explicit_anonymous_function_parameter_list
         | implicit_anonymous_function_parameter_list { $value = $implicit_anonymous_function_parameter_list.value; })?    ')'
     | implicit_anonymous_function_parameter_list { $value = $implicit_anonymous_function_parameter_list.value; }
     ;
+
 public implicit_anonymous_function_parameter_list returns [List<ParameterExpression> value]
 @init{
 	$value = new List<ParameterExpression>();
@@ -1231,6 +1233,7 @@ public expression_statement returns [Expression value]:
 public selection_statement returns [Expression value]:
     if_statement { $value = $if_statement.value; }
     | switch_statement  { $value = $switch_statement.value; } ;
+
 public if_statement returns [Expression value]:
     // else goes with closest if
     'if'   '('   boolean_expression   ')'  embedded_statement (('else') => else_statement )?
@@ -1252,8 +1255,10 @@ public if_statement returns [Expression value]:
 		}
 	 }
      ; 
+
 public else_statement returns [Expression value]:
     'else'   embedded_statement { $value = $embedded_statement.value; };
+
 public switch_statement returns [Expression value]:
     'switch'   '('   expression   ')'   switch_block  { 
 		// TODO: Better switch handling???
@@ -1269,6 +1274,7 @@ public switch_statement returns [Expression value]:
 			$value = Expression.Switch($expression.value, defaultCase.Body, cases); 
 		}
 	};
+
 public switch_block returns [List<SwitchCase> value]:
     '{'   switch_sections?  '}' { $value = $switch_sections.value; };
 
@@ -1286,6 +1292,7 @@ public switch_labels returns [List<Expression> value]
 	$value = new List<Expression>();
 }:
     (switch_label { $value.Add($switch_label.value); } )+ ;
+
 public switch_label returns [Expression value]:
     ('case'   constant_expression   ':') { $value = $constant_expression.value; }
     | ('default'   ':') { $value = Expression.Empty(); } ; 
@@ -1328,6 +1335,14 @@ public foreach_statement returns [Expression value]
             {
                 type = $expression.value.Type.GetGenericArguments()[0];
             }
+			else if ($expression.value.Type.IsArray)
+			{
+				type = $expression.value.Type.GetElementType();
+			}
+			else
+			{
+				type = typeof (object);
+			}
 		}
 		else
 		{
@@ -1367,43 +1382,59 @@ public jump_statement returns [Expression value]:
     | goto_statement
     | return_statement { $value = $return_statement.value; }
     | throw_statement ;
+
 public break_statement returns [Expression value]:
     'break'   ';' { $value = Expression.Break(_breakContext.Peek()); };
+
 public continue_statement returns [Expression value]:
     'continue'   ';' { $value = Expression.Continue(_continueContext.Peek()); };
+
 public goto_statement:
     'goto'   ( identifier
              | 'case'   constant_expression
              | 'default')   ';' ;
+
 public return_statement returns [Expression value]:
     'return'   expression?   ';' ;
+
 public throw_statement:
     'throw'   expression?   ';' ;
+
 public try_statement:
      'try'   block   ( catch_clauses   finally_clause?
                       | finally_clause);
 //TODO one or both
 public catch_clauses:
     'catch'   (specific_catch_clauses | general_catch_clause) ;
+
 public specific_catch_clauses:
     specific_catch_clause   ('catch'   (specific_catch_clause | general_catch_clause))*;
+
 public specific_catch_clause:
     '('   class_type   identifier?   ')'   block ;
+
 public general_catch_clause:
     block ;
+
 public finally_clause:
     'finally'   block ;
+
 public checked_statement:
     'checked'   block ;
+
 public unchecked_statement:
     'unchecked'   block ;
+
 public lock_statement:
     'lock'   '('  expression   ')'   embedded_statement ;
+
 public using_statement:
     'using'   '('    resource_acquisition   ')'    embedded_statement ;
+
 public resource_acquisition:
     (local_variable_declaration) => local_variable_declaration
     | expression ;
+
 public yield_statement:
     'yield'   ('return'   expression   ';'
               | 'break'   ';') ;

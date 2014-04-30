@@ -84,26 +84,17 @@ namespace ExpressionEvaluator.Parser
 
         }
 
+
         public static Expression Assign(Expression le, Expression re)
         {
-            // remove leading dot
-            //membername = membername.Substring(1);
-
-            Expression instance = null;
-            Type type = null;
-
-            var isDynamic = false;
-            var isRuntimeType = false;
-
-            type = le.Type;
-            instance = le;
-            isDynamic = type.IsDynamic();
+            var type = le.Type;
+            var isDynamic = type.IsDynamic();
 
             if (isDynamic)
             {
                 var dle = (DynamicExpression)le;
                 var membername = ((GetMemberBinder)dle.Binder).Name;
-                instance = dle.Arguments[0];
+                var instance = dle.Arguments[0];
 
                 var binder = Binder.SetMember(
                     CSharpBinderFlags.None,
@@ -115,9 +106,8 @@ namespace ExpressionEvaluator.Parser
                 return Expression.Dynamic(binder, typeof(object), instance, re);
 
             }
-            return Expression.Assign(le, re);
 
-            throw new Exception();
+            return Expression.Assign(le, TypeConversion.ImplicitConversion(le, re));
         }
 
         public static Type[] InferTypes(MethodInfo methodInfo, List<Expression> args)
@@ -1002,7 +992,6 @@ namespace ExpressionEvaluator.Parser
 
         public static Expression ForEach(LabelTarget exitLabel, LabelTarget continueLabel, ParameterExpression parameter, Expression iterator, Expression body)
         {
-            // Not Working yet!!!
             var enumerator = GetMethod(iterator, new TypeOrGeneric() {Identifier = "GetEnumerator"}, new List<Expression>());
 
             var enumParam = Expression.Variable(enumerator.Type);
@@ -1020,7 +1009,12 @@ namespace ExpressionEvaluator.Parser
 
             if (body.NodeType == ExpressionType.Block)
             {
-                expressions.Add(Expression.Assign(parameter, GetProperty(enumParam, "Current")));
+                var current = GetProperty(enumParam, "Current");
+                if (current.Type == typeof(object) && parameter.Type != typeof(object))
+                {
+                    current = Expression.Convert(current, parameter.Type);
+                }
+                expressions.Add(Assign(parameter, current));
                 variables.AddRange(((BlockExpression)body).Variables);
                 expressions.AddRange(((BlockExpression)body).Expressions);
             }

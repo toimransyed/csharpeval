@@ -101,12 +101,6 @@ namespace ExpressionEvaluator.Tests
             var ret = c.Eval();
         }
 
-        public class Xer
-        {
-            public int X { get; set; }
-        }
-
-
         [TestMethod]
         public void ParseDSuffixReturnsDouble()
         {
@@ -410,6 +404,34 @@ namespace ExpressionEvaluator.Tests
             cc.Eval();
         }
 
+
+        [TestMethod]
+        public void ForEachLoopArray()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { stringIterator = new[] { "Hello", "there", "world" } };
+
+            //foreach (var word in obj.stringIterator) { Debug.WriteLine(word); }
+            
+            var enumerator = obj.stringIterator.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                string word = (string)enumerator.Current;
+                Debug.WriteLine(word);
+            }
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("Debug", typeof(Debug));
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            var cc = new CompiledExpression() { StringToParse = "foreach(var word in obj.stringIterator) { Debug.WriteLine(word); }", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+        }
+
+
         [TestMethod]
         public void ForLoopWithContinue()
         {
@@ -513,6 +535,8 @@ namespace ExpressionEvaluator.Tests
         public int number { get; set; }
         public int number2 { get; set; }
         public IEnumerable<string> iterator;
+        public IEnumerable objectIterator;
+        public string[] stringIterator;
     }
 
     public enum NumEnum
