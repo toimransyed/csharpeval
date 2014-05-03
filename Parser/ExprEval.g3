@@ -1259,20 +1259,11 @@ public if_statement returns [Expression value]:
 public else_statement returns [Expression value]:
     'else'   embedded_statement { $value = $embedded_statement.value; };
 
-public switch_statement returns [Expression value]:
+public switch_statement returns [Expression value]
+@init{ var breakTarget = compilerState.PushBreak(); }
+@after{ compilerState.PopBreak(); }:
     'switch'   '('   expression   ')'   switch_block  { 
-		// TODO: Better switch handling???
-		var defaultCase = $switch_block.value.SingleOrDefault(x=>x.TestValues[0].Type == typeof(void));
-		var cases = $switch_block.value.Where(x=>x.TestValues[0].Type != typeof(void)).ToArray();
-
-		if(defaultCase == null)
-		{
-			$value = Expression.Switch($expression.value, cases); 
-		}
-		else
-		{
-			$value = Expression.Switch($expression.value, defaultCase.Body, cases); 
-		}
+		$value = ExpressionHelper.Switch(breakTarget, $expression.value, $switch_block.value);
 	};
 
 public switch_block returns [List<SwitchCase> value]:
@@ -1304,26 +1295,26 @@ public iteration_statement returns [Expression value]:
     | foreach_statement { $value = $foreach_statement.value; };
 
 public while_statement returns [Expression value] 
-@init{ var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
-@after{ _continueContext.Pop(); _breakContext.Pop(); }:
+@init{ var breakTarget = compilerState.PushBreak(); var continueTarget = compilerState.PushContinue(); }
+@after{ compilerState.PopContinue(); compilerState.PopBreak(); }:
     'while' '('   boolean_expression   ')'   embedded_statement 
 	{ $value = ExpressionHelper.While(breakTarget, continueTarget, null, $boolean_expression.value, $embedded_statement.value); };
 
 public do_statement returns [Expression value]
-@init{ var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
-@after{ _continueContext.Pop(); _breakContext.Pop(); }:
+@init{ var breakTarget = compilerState.PushBreak(); var continueTarget = compilerState.PushContinue(); }
+@after{ compilerState.PopContinue(); compilerState.PopBreak(); }:
     'do'   embedded_statement   'while'   '('   boolean_expression   ')'   ';' 
 	{ $value = ExpressionHelper.DoWhile(breakTarget, continueTarget, $embedded_statement.value, $boolean_expression.value); };
 
 public for_statement returns [Expression value]
-@init{ var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
-@after{ _continueContext.Pop(); _breakContext.Pop(); }:
+@init{ var breakTarget = compilerState.PushBreak(); var continueTarget = compilerState.PushContinue(); }
+@after{ compilerState.PopContinue(); compilerState.PopBreak(); }:
     'for'   '('   for_initializer?   ';'   for_condition?   ';'   for_iterator?   ')'   embedded_statement 
 	{ $value = ExpressionHelper.For(breakTarget, continueTarget, $for_initializer.value, $for_condition.value, $for_iterator.value, $embedded_statement.value); };
 
 public foreach_statement returns [Expression value]
-@init{ ParameterExpression parameter = null; var breakTarget = Expression.Label(); var continueTarget = Expression.Label(); _breakContext.Push(breakTarget); _continueContext.Push(continueTarget); }
-@after{ _continueContext.Pop(); _breakContext.Pop(); }:
+@init{ ParameterExpression parameter = null; var breakTarget = compilerState.PushBreak(); var continueTarget = compilerState.PushContinue(); }
+@after{ compilerState.PopContinue(); compilerState.PopBreak(); }:
     'foreach'   '('   local_variable_type   identifier  'in'   expression   ')' 
 	 {
 		var typeName = $local_variable_type.value.Identifier;
@@ -1384,10 +1375,10 @@ public jump_statement returns [Expression value]:
     | throw_statement ;
 
 public break_statement returns [Expression value]:
-    'break'   ';' { $value = Expression.Break(_breakContext.Peek()); };
+    'break'   ';' { $value = compilerState.Break(); };
 
 public continue_statement returns [Expression value]:
-    'continue'   ';' { $value = Expression.Continue(_continueContext.Peek()); };
+    'continue'   ';' { $value = compilerState.Continue(); };
 
 public goto_statement:
     'goto'   ( identifier
@@ -1395,7 +1386,16 @@ public goto_statement:
              | 'default')   ';' ;
 
 public return_statement returns [Expression value]:
-    'return'   expression?   ';' ;
+    'return'   expression?  { 
+		if($expression.value == null) 
+		{ 
+			$value = Expression.Return(compilerState.ReturnTarget); 
+		} 
+		else 
+		{ 
+			$value = Expression.Return(compilerState.ReturnTarget, $expression.value, $expression.value.Type); 
+		} 
+	}  ';' ;
 
 public throw_statement:
     'throw'   expression?   ';' ;

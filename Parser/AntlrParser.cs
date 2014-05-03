@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,5 +55,7 @@ namespace ExpressionEvaluator.Parser
         public object Global { get; set; }
 
         public CompiledExpressionType ExpressionType { get; set; }
+
+        public Type ReturnType { get; set; }
     }
 }

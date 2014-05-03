@@ -307,6 +307,58 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
+        public void SwitchStatement()
+        {
+            var a = new ClassA() { x = 1 };
+            var t = new TypeRegistry();
+
+            for (a.x = 1; a.x < 7; a.x++)
+            {
+                switch (a.x)
+                {
+                    case 1:
+                    case 2:
+                        Debug.WriteLine("Hello");
+                        break;
+                    case 3:
+                        Debug.WriteLine("There");
+                        break;
+                    case 4:
+                        Debug.WriteLine("World");
+                        break;
+                    default:
+                        Debug.WriteLine("Undefined");
+                        break;
+                }
+            }
+
+            t.RegisterSymbol("Debug", typeof(Debug));
+            var p = new CompiledExpression { StringToParse = "switch(x) { case 1: case 2: Debug.WriteLine('Hello'); break; case 3: Debug.WriteLine('There'); break; case 4: Debug.WriteLine('World'); break; default: Debug.WriteLine('Undefined'); break; }", TypeRegistry = t };
+            p.ExpressionType = CompiledExpressionType.StatementList;
+            var func = p.ScopeCompile<ClassA>();
+            for (a.x = 1; a.x < 7; a.x++)
+            {
+                func(a);
+            }
+        }
+
+        [TestMethod]
+        public void SwitchReturn()
+        {
+            var a = new ClassA() { x = 1 };
+            var t = new TypeRegistry();
+
+            var p = new CompiledExpression { StringToParse = "var retval = 'Exit'; switch(x) { case 1: case 2: return 'Hello'; case 3: return 'There'; case 4: return 'World'; default: return 'Undefined'; } return retval;", TypeRegistry = t };
+            p.ExpressionType = CompiledExpressionType.StatementList;
+            var func = p.ScopeCompile<ClassA>();
+            for (a.x = 1; a.x < 7; a.x++)
+            {
+                Debug.WriteLine(func(a));
+            }
+        }
+
+
+        [TestMethod]
         public void LocalImplicitVariables()
         {
             var registry = new TypeRegistry();
@@ -350,7 +402,7 @@ namespace ExpressionEvaluator.Tests
             registry.RegisterSymbol("obj", obj);
             registry.RegisterType("objHolder", typeof(objHolder));
             registry.RegisterDefaultTypes();
-            
+
             for (var i = 0; i < 10; i++) { obj.number2++; }
 
             var cc = new CompiledExpression() { StringToParse = "for(var i = 0; i < 10; i++) { obj.number++; }", TypeRegistry = registry };
@@ -387,7 +439,7 @@ namespace ExpressionEvaluator.Tests
             var obj = new objHolder() { iterator = new List<string>() { "Hello", "there", "world" } };
 
             registry.RegisterSymbol("obj", obj);
-            registry.RegisterType("Debug", typeof(Debug)); 
+            registry.RegisterType("Debug", typeof(Debug));
             registry.RegisterType("objHolder", typeof(objHolder));
             registry.RegisterDefaultTypes();
 
@@ -404,6 +456,31 @@ namespace ExpressionEvaluator.Tests
             cc.Eval();
         }
 
+        [TestMethod]
+        public void ForEachLoopNoBlock()
+        {
+            var registry = new TypeRegistry();
+
+            var obj = new objHolder() { iterator = new List<string>() { "Hello", "there", "world" } };
+
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterType("Debug", typeof(Debug));
+            registry.RegisterType("objHolder", typeof(objHolder));
+            registry.RegisterDefaultTypes();
+
+            //var iterator = new List<string>() { "Hello", "there", "world" };
+            //var enumerator = iterator.GetEnumerator();
+            //while (enumerator.MoveNext())
+            //{
+            //    var word = enumerator.Current;
+            //    Debug.WriteLine(word);
+            //}
+
+            var cc = new CompiledExpression() { StringToParse = "foreach(var word in obj.iterator) Debug.WriteLine(word);", TypeRegistry = registry };
+            cc.ExpressionType = CompiledExpressionType.StatementList;
+            cc.Eval();
+        }
+
 
         [TestMethod]
         public void ForEachLoopArray()
@@ -413,7 +490,7 @@ namespace ExpressionEvaluator.Tests
             var obj = new objHolder() { stringIterator = new[] { "Hello", "there", "world" } };
 
             //foreach (var word in obj.stringIterator) { Debug.WriteLine(word); }
-            
+
             var enumerator = obj.stringIterator.GetEnumerator();
             while (enumerator.MoveNext())
             {
@@ -443,7 +520,7 @@ namespace ExpressionEvaluator.Tests
             registry.RegisterSymbol("obj", obj);
             registry.RegisterType("objHolder", typeof(objHolder));
             registry.RegisterDefaultTypes();
-            
+
             for (var i = 0; i < 10; i++) { obj2.number++; if (i > 5) continue; obj2.number2++; }
 
             var cc = new CompiledExpression() { StringToParse = "for(var i = 0; i < 10; i++) { obj.number++; if(i > 5) continue; obj.number2++; }", TypeRegistry = registry };
@@ -525,7 +602,47 @@ namespace ExpressionEvaluator.Tests
             target.ScopeCompile();
         }
 
+        [TestMethod]
+        public void MethodOverLoading()
+        {
+            var controlScope = new MethodOverloading();
+            var testScope = new MethodOverloading();
 
+            var exp = new CompiledExpression();
+            Func<object, object> func;
+
+            controlScope.sum(1, 2, 3, 4, 5, 6, 7, 8);
+
+            exp.StringToParse = "sum(1, 2, 3, 4, 5, 6, 7, 8)";
+            func = exp.ScopeCompile();
+            func(testScope);
+            // expect sum(float i, params float[] nums) 
+            Assert.AreEqual(controlScope.MethodCalled, testScope.MethodCalled);
+
+            controlScope.sum(1, 2);
+
+            exp.StringToParse = "sum(1, 2)";
+            func = exp.ScopeCompile();
+            func(testScope);
+            // expect sum(int,int) is called
+            Assert.AreEqual(controlScope.MethodCalled, testScope.MethodCalled);
+
+            controlScope.sum(1.0d, 2.0d);
+
+            exp.StringToParse = "sum(1.0d, 2.0d)";
+            func = exp.ScopeCompile();
+            func(testScope);
+            // expect sum(double, double) is called
+            Assert.AreEqual(controlScope.MethodCalled, testScope.MethodCalled);
+
+            controlScope.sum(1, 2.0d);
+
+            exp.StringToParse = "sum(1,2.0d)";
+            func = exp.ScopeCompile();
+            func(testScope);
+            // expect sum(double, double) is called (no matching int, double)
+            Assert.AreEqual(controlScope.MethodCalled, testScope.MethodCalled);
+        }
     }
 
     public class objHolder
@@ -559,4 +676,82 @@ namespace ExpressionEvaluator.Tests
         public string Name { get; set; }
         public T Value { get; set; }
     }
+
+    public class MethodOverloading
+    {
+        public int MethodCalled { get; set; }
+
+        public double sum(double i, double t)
+        {
+            MethodCalled = 1;
+            var result = 0d;
+            return result;
+        }
+
+        public double sum(double i, int t)
+        {
+            MethodCalled = 2;
+            var result = 0d;
+            return result;
+        }
+
+        public int sum(int i, int t)
+        {
+            MethodCalled = 3;
+            var result = 0;
+            return result;
+        }
+
+        public int sum(int i1, int i2, int i3, int i4, int i5)
+        {
+            MethodCalled = 4;
+            var result = 0;
+            return result;
+        }
+
+
+        public double sum(double i, params double[] nums)
+        {
+            MethodCalled = 5;
+            var result = 0d;
+            foreach (var num in nums)
+            {
+                result += num;
+            }
+            return result;
+        }
+
+        public float sum(float i, params float[] nums)
+        {
+            MethodCalled = 6;
+            var result = 0f;
+            foreach (var num in nums)
+            {
+                result += num;
+            }
+            return result;
+        }
+
+
+        public int yes()
+        {
+            return 1234;
+        }
+
+        public bool no
+        {
+            get { return false; }
+        }
+
+        public int fix(int x)
+        {
+            return x + 1;
+        }
+
+        public int func(Predicate<int> t)
+        {
+            return t(5) ? 1 : 2;
+        }
+    }
+
 }
