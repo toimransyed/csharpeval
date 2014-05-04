@@ -509,7 +509,44 @@ public expression_list returns [List<Expression> values]
     first=expression { $values.Add($first.value); }  (',' succeeding=expression { $values.Add($succeeding.value); })* ;
 
 public assignment returns [Expression value]:
-    unary_expression   assignment_operator   expression { $value = ExpressionHelper.Assign($unary_expression.value, $expression.value); } ;
+    unary_expression   assignment_operator   expression { 
+		switch($assignment_operator.text) {
+			case "=":	
+				$value = ExpressionHelper.Assign($unary_expression.value, $expression.value); 
+				break;
+			case "+=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.AddAssign); 
+				break;
+			case "-=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.SubtractAssign); 
+				break;
+			case "*=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.MultiplyAssign); 
+				break;
+			case "/=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.DivideAssign); 
+				break;
+			// Note: StringTemplate requires escaping the percent symbol
+			case "\%=": 
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.ModuloAssign); 
+				break;
+			case "&=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.AndAssign); 
+				break;
+			case "|=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.OrAssign); 
+				break;
+			case "^=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.PowerAssign); 
+				break;
+			case "<<=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.LeftShiftAssign); 
+				break;
+			case ">>=":
+				$value = ExpressionHelper.BinaryOperator($unary_expression.value, $expression.value, ExpressionType.RightShiftAssign); 
+				break;
+		}
+	} ;
 public unary_expression returns [Expression value]: 
     //('(' arguments ')' ('[' | '.' | '(')) => primary_or_array_creation_expression
     (cast_expression) => cast_expression { $value = $cast_expression.value; }
@@ -525,8 +562,8 @@ public unary_expression returns [Expression value]:
     ;
 public cast_expression returns [Expression value]:
     '('   type   ')'   unary_expression { $value = Expression.Convert($unary_expression.value, GetType($type.text)); } ;
-public assignment_operator returns [Expression value]:
-    '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>' '>=' ;
+public assignment_operator:
+    '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' ;
 public pre_increment_expression returns [Expression value]: 
     '++'   unary_expression ;
 public pre_decrement_expression returns [Expression value]: 
@@ -1387,13 +1424,14 @@ public goto_statement:
 
 public return_statement returns [Expression value]:
     'return'   expression?  { 
+		HasReturn = true;
 		if($expression.value == null) 
 		{ 
-			$value = Expression.Return(compilerState.ReturnTarget); 
+			$value = Expression.Return(ReturnTarget); 
 		} 
 		else 
 		{ 
-			$value = Expression.Return(compilerState.ReturnTarget, $expression.value, $expression.value.Type); 
+			$value = Expression.Return(ReturnTarget, $expression.value, ReturnTarget.Type); 
 		} 
 	}  ';' ;
 

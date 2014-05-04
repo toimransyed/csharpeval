@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Antlr.Runtime;
 using ExpressionEvaluator;
@@ -12,9 +13,21 @@ namespace ExpressionEvaluator.Parser
 
         public Expression Scope { get; set; }
         public bool IsCall { get; set; }
-
+        public LabelTarget ReturnTarget { get; set; }
+        public bool HasReturn { get; private set;  }
         public TypeRegistry TypeRegistry { get; set; }
-        
+
+        //partial void EnterRule(string ruleName, int ruleIndex)
+        //{
+        //    base.TraceIn(ruleName, ruleIndex);
+        //    Debug.WriteLine("In: {0} {1}", ruleName, ruleIndex);
+        //}
+
+        //partial void LeaveRule(string ruleName, int ruleIndex)
+        //{
+        //    Debug.WriteLine("Out: {0} {1}", ruleName, ruleIndex);
+        //}
+
         public override void ReportError(RecognitionException e)
         {
             base.ReportError(e);
@@ -26,7 +39,7 @@ namespace ExpressionEvaluator.Parser
             }
             else
             {
-                message = string.Format("Error parsing token '{0}", e.Token.Text);
+                message = string.Format("Error parsing token '{0}'", e.Token.Text);
             }
             
             throw new ExpressionParseException(message, input);

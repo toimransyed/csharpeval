@@ -343,6 +343,25 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
+        public void Return()
+        {
+            var t = new TypeRegistry();
+
+            var p = new CompiledExpression<bool> { StringToParse = "return true;", TypeRegistry = t };
+            p.ExpressionType = CompiledExpressionType.StatementList;
+            Assert.AreEqual(true, p.Compile()());
+
+            p.StringToParse = "var x = 3; if (x == 3) { return true; } return false;";
+            Assert.AreEqual(true, p.Compile()());
+
+            p.StringToParse = "var x = 2; if (x == 3) { return true; } ";
+            Assert.AreEqual(true, p.Compile()());
+
+            p.StringToParse = "var x = true; x;";
+            Assert.AreEqual(true, p.Compile()());
+        }
+
+        [TestMethod]
         public void SwitchReturn()
         {
             var a = new ClassA() { x = 1 };
@@ -356,7 +375,6 @@ namespace ExpressionEvaluator.Tests
                 Debug.WriteLine(func(a));
             }
         }
-
 
         [TestMethod]
         public void LocalImplicitVariables()
@@ -603,6 +621,56 @@ namespace ExpressionEvaluator.Tests
         }
 
         [TestMethod]
+        public void AssignmentOperators()
+        {
+            var classA = new ClassA();
+
+            var exp = new CompiledExpression();
+            Func<ClassA, object> func;
+
+            exp.StringToParse = "x = 1";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(1, classA.x);
+
+            exp.StringToParse = "x += 9";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(10, classA.x);
+
+            exp.StringToParse = "x -= 4";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(6, classA.x);
+
+            exp.StringToParse = "x *= 5";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(30, classA.x);
+
+            exp.StringToParse = "x /= 2";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(15, classA.x);
+
+            exp.StringToParse = "x %= 13";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(2, classA.x);
+
+            exp.StringToParse = "x <<= 4";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(32, classA.x);
+
+            exp.StringToParse = "x >>= 1";
+            func = exp.ScopeCompile<ClassA>();
+            func(classA);
+            Assert.AreEqual(16, classA.x);
+        }
+
+
+        [TestMethod]
         public void MethodOverLoading()
         {
             var controlScope = new MethodOverloading();
@@ -643,7 +711,44 @@ namespace ExpressionEvaluator.Tests
             // expect sum(double, double) is called (no matching int, double)
             Assert.AreEqual(controlScope.MethodCalled, testScope.MethodCalled);
         }
+
+        //[TestMethod]
+        //public void Lambda()
+        //{
+        //    var tr = new TypeRegistry();
+        //    tr.RegisterType("Enumerable", typeof(Enumerable));
+        //    var data = new MyClass();
+        //    data.Y = new List<int>() { 1, 2, 3, 4, 5, 4, 4, 3, 4, 2 };
+        //    var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where<int>(Y, (y) => y == 4)", TypeRegistry = tr };
+        //    var f9 = c9.ScopeCompile<MyClass>();
+
+        //    Console.WriteLine(data.X);
+        //    f9(data);
+        //    Console.WriteLine(data.X);
+        //}
     }
+
+    public class MyClass
+    {
+        public int X { get; set; }
+        public List<int> Y { get; set; }
+        public Func<bool> Value { get; set; }
+        public void Foo()
+        {
+            X++;
+        }
+
+        public void Foo(int value)
+        {
+            X += value;
+        }
+
+        public int Bar(int value)
+        {
+            return value * 2;
+        }
+    }
+
 
     public class objHolder
     {

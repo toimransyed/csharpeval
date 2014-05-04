@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
+using System.Linq.Expressions;
 using ExpressionEvaluator;
 
 namespace Tests
@@ -78,7 +79,6 @@ namespace Tests
 
     class Program
     {
-
         static void Main(string[] args)
         {
             var registry1 = new TypeRegistry();
@@ -149,16 +149,6 @@ namespace Tests
             Console.WriteLine(data.X);
             f1(data);
             Console.WriteLine(data.X);
-
-            //var tr = new TypeRegistry();
-            //tr.RegisterType("Enumerable", typeof(Enumerable));
-
-            //var c9 = new CompiledExpression() { StringToParse = "Enumerable.Where<int>(Y, (y) => y == 4)", TypeRegistry = tr };
-            //var f9 = c9.ScopeCompile<MyClass>();
-
-            //Console.WriteLine(data.X);
-            //f9(data);
-            //Console.WriteLine(data.X);
 
 
             var qq = (25.82).ToString("0.00", new CultureInfo("fr-FR")) + "px";

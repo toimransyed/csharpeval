@@ -51,7 +51,7 @@ namespace ExpressionEvaluator.Parser.Expressions
 
         public IEnumerable<Expression> Expressions { get { return Statements.Select(x => x.Expression); } }
 
-        public Expression ToBlock()
+        public BlockExpression ToBlock()
         {
             var expressions = new List<Expression>();
             IList<ParameterExpression> parameters = null;
