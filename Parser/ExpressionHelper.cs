@@ -60,7 +60,7 @@ namespace ExpressionEvaluator.Parser
             {
                 type = le.Type;
                 instance = le;
-                isDynamic = type.IsDynamic();
+                isDynamic = type.IsDynamicOrObject();
             }
 
             if (isDynamic)
@@ -88,9 +88,9 @@ namespace ExpressionEvaluator.Parser
         public static Expression Assign(Expression le, Expression re)
         {
             var type = le.Type;
-            var isDynamic = type.IsDynamic();
+            var isDynamic = type.IsDynamicOrObject();
 
-            if (isDynamic)
+            if (type.IsDynamic())
             {
                 var dle = (DynamicExpression)le;
                 var membername = ((GetMemberBinder)dle.Binder).Name;
@@ -243,7 +243,7 @@ namespace ExpressionEvaluator.Parser
             {
                 type = le.Type;
                 instance = le;
-                isDynamic = type.IsDynamic();
+                isDynamic = type.IsDynamicOrObject();
             }
 
             if (isDynamic)
@@ -314,7 +314,7 @@ namespace ExpressionEvaluator.Parser
             {
                 type = le.Type;
                 instance = le;
-                isDynamic = type.IsDynamic();
+                isDynamic = type.IsDynamicOrObject();
             }
 
             if (isDynamic)
@@ -719,7 +719,7 @@ namespace ExpressionEvaluator.Parser
         {
             // perform implicit conversion on known types
 
-            if (le.Type.IsDynamic())
+            if (le.Type.IsDynamicOrObject())
             {
                 return DynamicUnaryOperator(le, expressionType);
             }
@@ -733,7 +733,7 @@ namespace ExpressionEvaluator.Parser
         {
             // perform implicit conversion on known types
 
-            if (le.Type.IsDynamic() && re.Type.IsDynamic())
+            if (le.Type.IsDynamicOrObject() || re.Type.IsDynamicOrObject())
             {
                 if (expressionType == ExpressionType.OrElse)
                 {
@@ -1041,7 +1041,7 @@ namespace ExpressionEvaluator.Parser
             variables.Add(parameter);
 
             var current = GetProperty(enumParam, "Current");
-            
+
             if (current.Type == typeof(object) && parameter.Type != typeof(object))
             {
                 current = Expression.Convert(current, parameter.Type);

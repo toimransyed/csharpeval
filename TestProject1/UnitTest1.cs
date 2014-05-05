@@ -745,30 +745,25 @@ namespace ExpressionEvaluator.Tests
             registry.RegisterSymbol("obj", obj);
             registry.RegisterDefaultTypes();
 
-            // okay
             var cc = new CompiledExpression() { StringToParse = "obj.Value == 'aa'", TypeRegistry = registry };
             var ret = cc.Eval();
             Assert.AreEqual(true, ret);
 
-            // okay
             obj.Value = 10;
             cc = new CompiledExpression() { StringToParse = "obj.Value == 10", TypeRegistry = registry };
             ret = cc.Eval();
             Assert.AreEqual(true, ret);
 
-            // fails
             obj.Value = 10.0;
             cc = new CompiledExpression() { StringToParse = "obj.Value == 10", TypeRegistry = registry };
             ret = cc.Eval();
             Assert.AreEqual(true, ret);
 
-            // fails
             obj.Value = 10.0;
             cc = new CompiledExpression() { StringToParse = "obj.Value = 5", TypeRegistry = registry };
             ret = cc.Eval();
             Assert.AreEqual(5, obj.Value);
 
-            // fails
             obj.Value = 10;
             cc = new CompiledExpression() { StringToParse = "obj.Value == 10.0", TypeRegistry = registry };
             ret = cc.Eval();

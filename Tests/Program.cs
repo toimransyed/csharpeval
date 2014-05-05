@@ -116,11 +116,18 @@ namespace Tests
         }
     }
 
-
+    public class objHolder2
+    {
+        public dynamic Value;
+    }
     class Program
     {
         static void Main(string[] args)
         {
+            var obj2 = new objHolder2();
+            obj2.Value = 5;
+
+
             var exp = "@ATADJ( @MAX( @SUBTR(@PR( 987043 ) , @AMT( 913000 ) ) , @MULT( @PR( 987043 ) , 0.20f ) ) , 60f ) ";
             var util = new Utility();
             var reg = new TypeRegistry();

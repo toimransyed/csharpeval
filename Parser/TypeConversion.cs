@@ -106,6 +106,19 @@ namespace ExpressionEvaluator.Parser
             return -1;
         }
 
+        // 6.1.7 Boxing Conversions
+        // A boxing conversion permits a value-type to be implicitly converted to a reference type. A boxing conversion exists from any non-nullable-value-type to object and dynamic, to System.ValueType and to any interface-type implemented by the non-nullable-value-type. Furthermore an enum-type can be converted to the type System.Enum.
+        // A boxing conversion exists from a nullable-type to a reference type, if and only if a boxing conversion exists from the underlying non-nullable-value-type to the reference type.
+        // A value type has a boxing conversion to an interface type I if it has a boxing conversion to an interface type I0 and I0 has an identity conversion to I.
+
+        public static Expression BoxingConversion(Expression dest, Expression src)
+        {
+            if (src.Type.IsValueType && dest.Type.IsDynamicOrObject())
+            {
+                src = Expression.Convert(src, dest.Type);
+            }
+            return src;
+        }
 
         public static Expression ImplicitConversion(Expression dest, Expression src)
         {
@@ -115,9 +128,12 @@ namespace ExpressionEvaluator.Parser
                 {
                     src = ImplicitNumericConversion(src, dest.Type);
                 }
+                src = BoxingConversion(dest, src);
             }
             return src;
         }
+
+        // 6.1.2 Implicit numeric conversions
 
         public static Expression ImplicitNumericConversion(Expression src, Type target)
         {
