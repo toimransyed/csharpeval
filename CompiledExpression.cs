@@ -27,7 +27,7 @@ namespace ExpressionEvaluator
 
         public Func<TResult> Compile(bool isCall = false)
         {
-            if (Expression == null) Expression = WrapExpression(BuildTree(), false);
+            Expression = WrapExpression(BuildTree(), false);
             return Expression.Lambda<Func<TResult>>(Expression).Compile();
         }
 
@@ -37,7 +37,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Action CompileCall()
         {
-            if (Expression == null) Expression = BuildTree(null, true);
+            Expression = BuildTree(null, true);
             return Expression.Lambda<Action>(Expression).Compile();
         }
 
@@ -49,7 +49,7 @@ namespace ExpressionEvaluator
         public Action<TParam> ScopeCompileCall<TParam>()
         {
             var scopeParam = Expression.Parameter(typeof(TParam), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam, true);
+            Expression = BuildTree(scopeParam, true);
             return Expression.Lambda<Action<TParam>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
@@ -57,14 +57,14 @@ namespace ExpressionEvaluator
         public Func<object, TResult> ScopeCompile()
         {
             var scopeParam = Expression.Parameter(typeof(object), "scope");
-            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam), false);
+            Expression = WrapExpression(BuildTree(scopeParam), false);
             return Expression.Lambda<Func<dynamic, TResult>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
         public Func<TParam, TResult> ScopeCompile<TParam>()
         {
             var scopeParam = Expression.Parameter(typeof(TParam), "scope");
-            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam), false);
+            Expression = WrapExpression(BuildTree(scopeParam), false);
             return Expression.Lambda<Func<TParam, TResult>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
@@ -121,7 +121,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Func<object> Compile()
         {
-            if (Expression == null) Expression = WrapExpression(BuildTree(), true);
+            Expression = WrapExpression(BuildTree(), true);
             return Expression.Lambda<Func<object>>(Expression).Compile();
         }
         
@@ -132,7 +132,7 @@ namespace ExpressionEvaluator
         /// <returns></returns>
         public Action CompileCall()
         {
-            if (Expression == null) Expression = BuildTree(null, true);
+            Expression = BuildTree(null, true);
             return Expression.Lambda<Action>(Expression).Compile();
         }
 
@@ -143,7 +143,7 @@ namespace ExpressionEvaluator
         public Func<object, object> ScopeCompile()
         {
             var scopeParam = Expression.Parameter(typeof(object), "scope");
-            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam), true);
+            Expression = WrapExpression(BuildTree(scopeParam), true);
             return Expression.Lambda<Func<dynamic, object>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
@@ -154,7 +154,7 @@ namespace ExpressionEvaluator
         public Action<object> ScopeCompileCall()
         {
             var scopeParam = Expression.Parameter(typeof(object), "scope");
-            if (Expression == null) Expression = BuildTree(scopeParam, true);
+            Expression = BuildTree(scopeParam, true);
             return Expression.Lambda<Action<dynamic>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
@@ -165,7 +165,7 @@ namespace ExpressionEvaluator
         public Action<TParam> ScopeCompileCall<TParam>()
         {
             var scopeParam = Expression.Parameter(typeof(TParam), "scope");
-            if (Expression == null) Expression = WrapToVoid(BuildTree(scopeParam));
+            Expression = WrapToVoid(BuildTree(scopeParam));
             return Expression.Lambda<Action<TParam>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
@@ -177,7 +177,7 @@ namespace ExpressionEvaluator
         public Func<TParam, object> ScopeCompile<TParam>()
         {
             var scopeParam = Expression.Parameter(typeof(TParam), "scope");
-            if (Expression == null) Expression = WrapExpression(BuildTree(scopeParam), true);
+            Expression = WrapExpression(BuildTree(scopeParam), true);
             return Expression.Lambda<Func<TParam, object>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 

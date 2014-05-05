@@ -17,8 +17,6 @@ namespace ExpressionEvaluator.Parser
         public bool HasReturn { get; private set;  }
         public TypeRegistry TypeRegistry { get; set; }
 
-        public List<ParameterExpression> ExternalParameters { get; set; } 
-
         //partial void EnterRule(string ruleName, int ruleIndex)
         //{
         //    base.TraceIn(ruleName, ruleIndex);
@@ -81,7 +79,7 @@ namespace ExpressionEvaluator.Parser
             return Type.GetType(type);
         }
 
-        private ParameterList ParameterList = new ParameterList();
+        public ParameterList ParameterList = new ParameterList();
 
     }
 }

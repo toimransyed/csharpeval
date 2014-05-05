@@ -726,6 +726,54 @@ namespace ExpressionEvaluator.Tests
         //    f9(data);
         //    Console.WriteLine(data.X);
         //}
+
+        [TestMethod]
+        public void CompileToGenericFunc()
+        {
+            var data = new MyClass();
+            data.Y = new List<int>() { 1, 2, 3, 4, 5, 4, 4, 3, 4, 2 };
+            var c9 = new CompiledExpression() { StringToParse = "y == 4" };
+            var f9 = c9.Compile<Func<int, bool>>("y");
+            Assert.AreEqual(4, data.Y.Where(f9).Count());
+        }
+
+        [TestMethod]
+        public void DynamicValue()
+        {
+            var registry = new TypeRegistry();
+            var obj = new objHolder() { Value = "aa" };
+            registry.RegisterSymbol("obj", obj);
+            registry.RegisterDefaultTypes();
+
+            // okay
+            var cc = new CompiledExpression() { StringToParse = "obj.Value == 'aa'", TypeRegistry = registry };
+            var ret = cc.Eval();
+            Assert.AreEqual(true, ret);
+
+            // okay
+            obj.Value = 10;
+            cc = new CompiledExpression() { StringToParse = "obj.Value == 10", TypeRegistry = registry };
+            ret = cc.Eval();
+            Assert.AreEqual(true, ret);
+
+            // fails
+            obj.Value = 10.0;
+            cc = new CompiledExpression() { StringToParse = "obj.Value == 10", TypeRegistry = registry };
+            ret = cc.Eval();
+            Assert.AreEqual(true, ret);
+
+            // fails
+            obj.Value = 10.0;
+            cc = new CompiledExpression() { StringToParse = "obj.Value = 5", TypeRegistry = registry };
+            ret = cc.Eval();
+            Assert.AreEqual(5, obj.Value);
+
+            // fails
+            obj.Value = 10;
+            cc = new CompiledExpression() { StringToParse = "obj.Value == 10.0", TypeRegistry = registry };
+            ret = cc.Eval();
+            Assert.AreEqual(true, ret);
+        }
     }
 
     public class MyClass
@@ -759,6 +807,7 @@ namespace ExpressionEvaluator.Tests
         public IEnumerable<string> iterator;
         public IEnumerable objectIterator;
         public string[] stringIterator;
+        public dynamic Value;
     }
 
     public enum NumEnum
