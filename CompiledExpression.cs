@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using ExpressionEvaluator.Parser;
 
@@ -121,6 +122,7 @@ namespace ExpressionEvaluator
             if (Expression == null) Expression = WrapExpression(BuildTree(), true);
             return Expression.Lambda<Func<object>>(Expression).Compile();
         }
+        
 
         /// <summary>
         /// Compiles the expression to a function that returns void

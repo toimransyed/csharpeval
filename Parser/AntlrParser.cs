@@ -30,7 +30,7 @@ namespace ExpressionEvaluator.Parser
             var lexer = new ExprEvalLexer(input);
             var tokens = new TokenRewriteStream(lexer);
             if (TypeRegistry == null) TypeRegistry = new TypeRegistry();
-            var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall };
+            var parser = new ExprEvalParser(tokens) { TypeRegistry = TypeRegistry, Scope = scope, IsCall = isCall, ExternalParameters = ExternalParameters };
             switch (ExpressionType)
             {
                 case CompiledExpressionType.Expression:
@@ -54,5 +54,7 @@ namespace ExpressionEvaluator.Parser
         public object Global { get; set; }
 
         public CompiledExpressionType ExpressionType { get; set; }
+
+        public List<ParameterExpression> ExternalParameters { get; set; }
     }
 }

@@ -141,18 +141,65 @@ namespace Tests
         One = 1,
         Two = 2,
         Three = 3
-   }
+    }
 
     public class ValueHolder
     {
         public string Value { get; set; }
     }
 
+    public class Utility
+    {
+        public float ATADJ(float value, float adj)
+        {
+            return value;
+        }
+
+        public float MAX(float value1, float value2)
+        {
+            return new List<float> { value1, value2 }.Max();
+        }
+
+        public float MAX(params float[] value)
+        {
+            return value.Max();
+        }
+
+        public float SUBTR(float left, float right)
+        {
+            return left - right;
+        }
+
+        public float MULT(float left, float right)
+        {
+            return left * right;
+        }
+
+        public float PR(float value)
+        {
+            return value;
+        }
+
+        public float AMT(float value)
+        {
+            return value;
+        }
+    }
+
+
     class Program
     {
 
         static void Main(string[] args)
         {
+            var exp = "@ATADJ( @MAX( @SUBTR(@PR( 987043 ) , @AMT( 913000 ) ) , @MULT( @PR( 987043 ) , 0.20f ) ) , 60f ) ";
+            var util = new Utility();
+            var reg = new TypeRegistry();
+            reg.RegisterSymbol("util", util);
+            exp = exp.Replace("@", "util.");
+            var ce = new CompiledExpression() { StringToParse = exp, TypeRegistry = reg };
+            var res = ce.Eval();
+
             var registry1 = new TypeRegistry();
             var registry = new TypeRegistry();
 

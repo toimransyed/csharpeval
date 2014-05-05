@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using ExpressionEvaluator.Parser;
 
@@ -44,6 +46,20 @@ namespace ExpressionEvaluator
         protected void Parse()
         {
             BuildTree(null, false);
+        }
+
+        public T Compile<T>(params string[] parameters)
+        {
+            var f = typeof (T);
+            var argTypes = f.GetGenericArguments();
+            if (argTypes.Length - parameters.Length != 1)
+            {
+                throw new Exception("Type arguments must be 1 more than the number of parameters");
+            }
+            var argParams = parameters.Select((t, i) => Expression.Parameter(argTypes[i], t)).ToList();
+            Parser.ExternalParameters = argParams;
+            if (Expression == null) Expression = WrapExpression(BuildTree(), true);
+            return Expression.Lambda<T>(Expression, argParams).Compile();
         }
 
         protected Expression WrapExpression(Expression source, bool castToObject)

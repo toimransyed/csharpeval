@@ -16,7 +16,9 @@ namespace ExpressionEvaluator.Parser
         public bool IsCall { get; set; }
 
         public TypeRegistry TypeRegistry { get; set; }
-        
+
+        public List<ParameterExpression> ExternalParameters { get; set; } 
+
         public override void ReportError(RecognitionException e)
         {
             base.ReportError(e);
