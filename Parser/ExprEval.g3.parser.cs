@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Antlr.Runtime;
 using ExpressionEvaluator;
@@ -9,15 +9,26 @@ namespace ExpressionEvaluator.Parser
 {
     public partial class ExprEvalParser
     {
-        private Stack<LabelTarget> _breakContext = new Stack<LabelTarget>();
-        private Stack<LabelTarget> _continueContext = new Stack<LabelTarget>(); 
+        private CompilerState compilerState = new CompilerState();
 
         public Expression Scope { get; set; }
         public bool IsCall { get; set; }
-
+        public LabelTarget ReturnTarget { get; set; }
+        public bool HasReturn { get; private set;  }
         public TypeRegistry TypeRegistry { get; set; }
 
         public List<ParameterExpression> ExternalParameters { get; set; } 
+
+        //partial void EnterRule(string ruleName, int ruleIndex)
+        //{
+        //    base.TraceIn(ruleName, ruleIndex);
+        //    Debug.WriteLine("In: {0} {1}", ruleName, ruleIndex);
+        //}
+
+        //partial void LeaveRule(string ruleName, int ruleIndex)
+        //{
+        //    Debug.WriteLine("Out: {0} {1}", ruleName, ruleIndex);
+        //}
 
         public override void ReportError(RecognitionException e)
         {
@@ -30,7 +41,7 @@ namespace ExpressionEvaluator.Parser
             }
             else
             {
-                message = string.Format("Error parsing token '{0}", e.Token.Text);
+                message = string.Format("Error parsing token '{0}'", e.Token.Text);
             }
             
             throw new ExpressionParseException(message, input);
@@ -71,54 +82,6 @@ namespace ExpressionEvaluator.Parser
         }
 
         private ParameterList ParameterList = new ParameterList();
-
-    }
-
-    public class ParameterList
-    {
-        private readonly List<ParameterExpression> _parameters = new List<ParameterExpression>();
-
-        public void Add(ParameterExpression parameter)
-        {
-            ParameterExpression p;
-            if (!ParameterLookup.TryGetValue(parameter.Name, out p))
-            {
-                _parameters.Add(parameter);
-            }
-            else
-            {
-                throw new Exception(string.Format("Parameter \"{0}\" conflicts with an existing parameter", parameter.Name));
-            }
-
-        }
-
-        public void Add(List<ParameterExpression> list)
-        {
-            foreach (var parameterExpression in list)
-            {
-                Add(parameterExpression);
-            }
-        }
-
-        private Dictionary<string, ParameterExpression> ParameterLookup { get { return _parameters.ToDictionary(expression => expression.Name); } }
-
-        public bool TryGetValue(string name, out ParameterExpression parameter)
-        {
-            return ParameterLookup.TryGetValue(name, out parameter);
-        }
-
-        public void Remove(List<ParameterExpression> list)
-        {
-            foreach (var parameterExpression in list)
-            {
-                ParameterExpression p;
-
-                if (ParameterLookup.TryGetValue(parameterExpression.Name, out p))
-                {
-                    _parameters.Remove(parameterExpression);
-                }
-            }
-        }
 
     }
 }

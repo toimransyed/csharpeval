@@ -17,6 +17,7 @@ namespace ExpressionEvaluator
         public CompiledExpression()
         {
             Parser = new AntlrParser();
+            Parser.ReturnType = typeof(TResult);
         }
 
         public CompiledExpression(string expression)
@@ -106,6 +107,7 @@ namespace ExpressionEvaluator
         public CompiledExpression()
         {
             Parser = new AntlrParser();
+            Parser.ReturnType = typeof(object);
         }
 
         public CompiledExpression(string expression)

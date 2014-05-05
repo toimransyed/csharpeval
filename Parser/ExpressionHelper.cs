@@ -990,9 +990,42 @@ namespace ExpressionEvaluator.Parser
             }
         }
 
+        public static Expression Switch(LabelTarget breakTarget, Expression switchCase, List<SwitchCase> switchBlock)
+        {
+            var defaultCase = switchBlock.SingleOrDefault(x => x.TestValues[0].Type == typeof(void));
+            var cases = switchBlock.Where(x => x.TestValues[0].Type != typeof(void)).ToArray();
+
+            foreach (var @case in cases)
+            {
+                if (@case.Body.NodeType != ExpressionType.Block) continue;
+                var caseBlock = (BlockExpression)@case.Body;
+                if (caseBlock.Expressions.Last().NodeType != ExpressionType.Goto)
+                {
+                    throw new Exception("Break statement is missing");
+                }
+            }
+
+            Expression switchExp = null;
+
+            if (defaultCase == null)
+            {
+                switchExp = Expression.Switch(switchCase, cases);
+            }
+            else
+            {
+                switchExp = Expression.Switch(switchCase, defaultCase.Body, cases);
+            }
+
+            return Expression.Block(new[] {
+			    switchExp,
+			    Expression.Label(breakTarget)
+    		});
+
+        }
+
         public static Expression ForEach(LabelTarget exitLabel, LabelTarget continueLabel, ParameterExpression parameter, Expression iterator, Expression body)
         {
-            var enumerator = GetMethod(iterator, new TypeOrGeneric() {Identifier = "GetEnumerator"}, new List<Expression>());
+            var enumerator = GetMethod(iterator, new TypeOrGeneric() { Identifier = "GetEnumerator" }, new List<Expression>());
 
             var enumParam = Expression.Variable(enumerator.Type);
             var assign = Expression.Assign(enumParam, enumerator);
@@ -1007,22 +1040,15 @@ namespace ExpressionEvaluator.Parser
 
             variables.Add(parameter);
 
-            if (body.NodeType == ExpressionType.Block)
+            var current = GetProperty(enumParam, "Current");
+            
+            if (current.Type == typeof(object) && parameter.Type != typeof(object))
             {
-                var current = GetProperty(enumParam, "Current");
-                if (current.Type == typeof(object) && parameter.Type != typeof(object))
-                {
-                    current = Expression.Convert(current, parameter.Type);
-                }
-                expressions.Add(Assign(parameter, current));
-                variables.AddRange(((BlockExpression)body).Variables);
-                expressions.AddRange(((BlockExpression)body).Expressions);
-            }
-            else
-            {
-                expressions.Add(body);
+                current = Expression.Convert(current, parameter.Type);
             }
 
+            expressions.Add(Assign(parameter, current));
+            expressions.Add(body);
 
             var newbody = Expression.Block(variables, expressions);
             return While(exitLabel, continueLabel, localVar, condition, newbody);
@@ -1046,12 +1072,12 @@ namespace ExpressionEvaluator.Parser
 
 
             var loopblock = new List<Expression>();
-            
+
             if (condition != null)
             {
                 loopblock.Add(Expression.IfThen(Expression.Not(condition), Expression.Goto(exitLabel)));
             }
-            
+
             loopblock.Add(body);
             loopblock.Add(Expression.Label(continueLabel));
 
@@ -1106,7 +1132,7 @@ namespace ExpressionEvaluator.Parser
 
                 return Expression.Block(setup.Variables, loopBody);
             }
-            return  Expression.Block(loopBody);
+            return Expression.Block(loopBody);
         }
     }
 }

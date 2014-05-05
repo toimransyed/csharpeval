@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -56,5 +57,6 @@ namespace ExpressionEvaluator.Parser
         public CompiledExpressionType ExpressionType { get; set; }
 
         public List<ParameterExpression> ExternalParameters { get; set; }
+        public Type ReturnType { get; set; }
     }
 }

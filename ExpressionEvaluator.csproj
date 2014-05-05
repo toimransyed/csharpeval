@@ -69,6 +69,7 @@
     <Compile Include="obj\Debug\ExprEvalLexer.cs" />
     <Compile Include="obj\Debug\ExprEvalParser.cs" />
     <Compile Include="Parser\AntlrParser.cs" />
+    <Compile Include="Parser\CompilerState.cs" />
     <Compile Include="Parser\ExpressionHelper.cs" />
     <Compile Include="Parser\ExpressionParseException.cs" />
     <Compile Include="Parser\Expressions\AccessIdentifier.cs" />
@@ -89,6 +90,7 @@
     </Compile>
     <Compile Include="Parser\HelperMethods.cs" />
     <Compile Include="Parser\MethodResolution.cs" />
+    <Compile Include="Parser\ParameterList.cs" />
     <Compile Include="Parser\TypeConversion.cs" />
     <Compile Include="Parser\TypeExtensions.cs" />
     <Compile Include="Parser\TypeVariable.cs" />
