@@ -106,6 +106,20 @@ namespace ExpressionEvaluator.Parser
             return -1;
         }
 
+        // 6.1.6 Implicit Reference Conversions
+
+        public static Expression ReferenceConversion(Expression dest, Expression src)
+        {
+            //if (!src.Type.IsValueType)
+            //{
+            //    if (src.Type.IsSubclassOf(dest.Type))
+            //    {
+            //        src = Expression.Convert(src, dest.Type);
+            //    }
+            //}
+            return src;
+        }
+
         // 6.1.7 Boxing Conversions
         // A boxing conversion permits a value-type to be implicitly converted to a reference type. A boxing conversion exists from any non-nullable-value-type to object and dynamic, to System.ValueType and to any interface-type implemented by the non-nullable-value-type. Furthermore an enum-type can be converted to the type System.Enum.
         // A boxing conversion exists from a nullable-type to a reference type, if and only if a boxing conversion exists from the underlying non-nullable-value-type to the reference type.
@@ -120,6 +134,18 @@ namespace ExpressionEvaluator.Parser
             return src;
         }
 
+        //        6.1.5 Null literal conversions
+        //An implicit conversion exists from the null literal to any nullable type. This conversion produces the null value (§4.1.10) of the given nullable type.
+        public static Expression NullLiteralConverion(Expression dest, Expression src)
+        {
+            if (src.NodeType == ExpressionType.Constant && src.Type == typeof(object) && ((ConstantExpression)src).Value == null && Nullable.GetUnderlyingType(dest.Type) != null)
+            {
+                return Expression.Constant(Activator.CreateInstance(dest.Type, dest.Type.GetConstructor(new[] { dest.Type })), dest.Type);
+            }
+            return src;
+        }
+
+        // 6.1 Implicit Conversions
         public static Expression ImplicitConversion(Expression dest, Expression src)
         {
             if (dest.Type != src.Type)
@@ -128,10 +154,14 @@ namespace ExpressionEvaluator.Parser
                 {
                     src = ImplicitNumericConversion(src, dest.Type);
                 }
+                src = NullLiteralConverion(dest, src);
+                src = ReferenceConversion(dest, src);
                 src = BoxingConversion(dest, src);
             }
             return src;
         }
+
+
 
         // 6.1.2 Implicit numeric conversions
 
@@ -178,7 +208,8 @@ namespace ExpressionEvaluator.Parser
                     typeof (long),
                     typeof (ulong),
                     typeof (char),
-                    typeof (float)
+                    typeof (float),
+                    typeof (double)
                 };
 
             ImplicitNumericConversions.Add(typeof(sbyte), new List<Type>() { typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal) });

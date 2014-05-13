@@ -147,6 +147,13 @@ namespace ExpressionEvaluator
             return Expression.Lambda<Func<dynamic, object>>(Expression, new ParameterExpression[] { scopeParam }).Compile();
         }
 
+        public LambdaExpression GenerateLambda()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            Expression = WrapExpression(BuildTree(scopeParam), true);
+            return Expression.Lambda<Func<dynamic, object>>(Expression, new ParameterExpression[] { scopeParam });
+        }
+
         /// <summary>
         /// Compiles the expression to a function that takes an object as a parameter and returns an object
         /// </summary>

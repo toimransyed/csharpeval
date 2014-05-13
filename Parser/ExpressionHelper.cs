@@ -18,29 +18,20 @@ namespace ExpressionEvaluator.Parser
     {
         private static readonly Type StringType = typeof(string);
 
-        private static readonly MethodInfo ToStringMethodInfo = typeof(Convert).GetMethod("ToString",
-                                                                                           new Type[] { typeof(CultureInfo) });
-
-
         private static Expression ConvertToString(Expression instance)
         {
-            return Expression.Call(typeof(Convert), "ToString", null, instance,
-                                   Expression.Constant(CultureInfo.InvariantCulture));
+            return Expression.Call(typeof(Convert), "ToString", null, instance);
         }
 
         public static Expression Add(Expression le, Expression re)
         {
             if (le.Type == StringType || re.Type == StringType)
             {
-
                 if (le.Type != typeof(string)) le = ConvertToString(le);
                 if (re.Type != typeof(string)) re = ConvertToString(re);
                 return Expression.Add(le, re, StringType.GetMethod("Concat", new Type[] { le.Type, re.Type }));
             }
-            else
-            {
-                return Expression.Add(le, re);
-            }
+            return Expression.Add(le, re);
         }
 
         public static Expression GetPropertyIndex(Expression le, IEnumerable<Expression> args)
@@ -90,7 +81,7 @@ namespace ExpressionEvaluator.Parser
             var type = le.Type;
             var isDynamic = type.IsDynamicOrObject();
 
-            if (type.IsDynamic())
+            if (type.IsDynamic() || le.NodeType == ExpressionType.Dynamic)
             {
                 var dle = (DynamicExpression)le;
                 var membername = ((GetMemberBinder)dle.Binder).Name;
@@ -100,7 +91,11 @@ namespace ExpressionEvaluator.Parser
                     CSharpBinderFlags.None,
                     membername,
                     type,
-                    new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }
+                    new[]
+                        {
+                            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+                        }
                     );
 
                 return Expression.Dynamic(binder, typeof(object), instance, re);
@@ -244,6 +239,29 @@ namespace ExpressionEvaluator.Parser
                 type = le.Type;
                 instance = le;
                 isDynamic = type.IsDynamicOrObject();
+                if (!isDynamic)
+                {
+                    var prop = type.GetProperty(membername);
+                    if (prop != null)
+                    {
+                        if (prop.GetCustomAttributes(false).Any(x => x.GetType() == typeof(DynamicAttribute)))
+                        {
+                            isDynamic = true;
+                        }
+                    }
+                    else
+                    {
+                        var fieldInfo = type.GetField(membername);
+                        if (fieldInfo != null)
+                        {
+                            if (fieldInfo.GetCustomAttributes(false).Any(x => x.GetType() == typeof(DynamicAttribute)))
+                            {
+                                isDynamic = true;
+                            }
+                        }
+                    }
+                }
+
             }
 
             if (isDynamic)
@@ -256,18 +274,6 @@ namespace ExpressionEvaluator.Parser
                     );
 
                 Expression result = Expression.Dynamic(binder, typeof(object), instance);
-
-                // Item#8: worksround suggested by gadnio
-                // try to get the property explicitly, get its value and unbox it
-                // fails with ScopeCompile...
-                //var callSite = CallSite<Func<CallSite, object, object>>.Create(binder);
-                //var parentObject = Expression.Lambda<Func<object>>(instance).Compile()();
-                //var propertyValue = callSite.Target(callSite, parentObject);
-                //if (propertyValue != null && propertyValue.GetType() != typeof(object))
-                //{
-                //    // unbox!
-                //    result = Expression.Constant(propertyValue);
-                //}
 
                 return result;
             }
@@ -733,7 +739,7 @@ namespace ExpressionEvaluator.Parser
         {
             // perform implicit conversion on known types
 
-            if (le.Type.IsDynamicOrObject() || re.Type.IsDynamicOrObject())
+            if (le.NodeType == ExpressionType.Dynamic || re.NodeType == ExpressionType.Dynamic)
             {
                 if (expressionType == ExpressionType.OrElse)
                 {
@@ -760,7 +766,7 @@ namespace ExpressionEvaluator.Parser
             }
             else
             {
-                TypeConversion.Convert(ref le, ref re);
+                re = TypeConversion.ImplicitConversion(le, re);
 
                 return GetBinaryOperator(le, re, expressionType);
             }
@@ -955,9 +961,17 @@ namespace ExpressionEvaluator.Parser
 
         public static Expression Condition(Expression condition, Expression ifTrue, Expression ifFalse)
         {
-            if (condition.Type != typeof(bool))
+            if (condition.NodeType == ExpressionType.Dynamic)
             {
-                condition = Expression.Convert(condition, typeof(bool));
+                var expArgs = new List<Expression>() { condition };
+
+                var binderM = Binder.UnaryOperation(CSharpBinderFlags.None, ExpressionType.IsTrue, condition.Type,
+                                                new CSharpArgumentInfo[]
+                                                    {
+                                                        CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                                                    });
+
+                condition = Expression.Dynamic(binderM, typeof(bool), expArgs);
             }
 
             // perform implicit conversion on known types ???

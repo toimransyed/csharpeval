@@ -96,7 +96,7 @@ namespace ExpressionEvaluator.Tests
         {
             var str = "new TestClass(123)";
             var t = new TypeRegistry();
-            t.RegisterSymbol("TestClass", typeof(TestClass));
+            t.RegisterType("TestClass", typeof(TestClass));
             var c = new CompiledExpression<TestClass>(str) { TypeRegistry = t };
             var ret = c.Eval();
         }
@@ -342,39 +342,39 @@ namespace ExpressionEvaluator.Tests
             }
         }
 
-        [TestMethod]
-        public void Return()
-        {
-            var t = new TypeRegistry();
+        //[TestMethod]
+        //public void Return()
+        //{
+        //    var t = new TypeRegistry();
 
-            var p = new CompiledExpression<bool> { StringToParse = "return true;", TypeRegistry = t };
-            p.ExpressionType = CompiledExpressionType.StatementList;
-            Assert.AreEqual(true, p.Compile()());
+        //    var p = new CompiledExpression<bool> { StringToParse = "return true;", TypeRegistry = t };
+        //    p.ExpressionType = CompiledExpressionType.StatementList;
+        //    Assert.AreEqual(true, p.Compile()());
 
-            p.StringToParse = "var x = 3; if (x == 3) { return true; } return false;";
-            Assert.AreEqual(true, p.Compile()());
+        //    p.StringToParse = "var x = 3; if (x == 3) { return true; } return false;";
+        //    Assert.AreEqual(true, p.Compile()());
 
-            p.StringToParse = "var x = 2; if (x == 3) { return true; } ";
-            Assert.AreEqual(true, p.Compile()());
+        //    p.StringToParse = "var x = 2; if (x == 3) { return true; } ";
+        //    Assert.AreEqual(true, p.Compile()());
 
-            p.StringToParse = "var x = true; x;";
-            Assert.AreEqual(true, p.Compile()());
-        }
+        //    p.StringToParse = "var x = true; x;";
+        //    Assert.AreEqual(true, p.Compile()());
+        //}
 
-        [TestMethod]
-        public void SwitchReturn()
-        {
-            var a = new ClassA() { x = 1 };
-            var t = new TypeRegistry();
+        //[TestMethod]
+        //public void SwitchReturn()
+        //{
+        //    var a = new ClassA() { x = 1 };
+        //    var t = new TypeRegistry();
 
-            var p = new CompiledExpression { StringToParse = "var retval = 'Exit'; switch(x) { case 1: case 2: return 'Hello'; case 3: return 'There'; case 4: return 'World'; default: return 'Undefined'; } return retval;", TypeRegistry = t };
-            p.ExpressionType = CompiledExpressionType.StatementList;
-            var func = p.ScopeCompile<ClassA>();
-            for (a.x = 1; a.x < 7; a.x++)
-            {
-                Debug.WriteLine(func(a));
-            }
-        }
+        //    var p = new CompiledExpression { StringToParse = "var retval = 'Exit'; switch(x) { case 1: case 2: return 'Hello'; case 3: return 'There'; case 4: return 'World'; default: return 'Undefined'; } return retval;", TypeRegistry = t };
+        //    p.ExpressionType = CompiledExpressionType.StatementList;
+        //    var func = p.ScopeCompile<ClassA>();
+        //    for (a.x = 1; a.x < 7; a.x++)
+        //    {
+        //        Debug.WriteLine(func(a));
+        //    }
+        //}
 
         [TestMethod]
         public void LocalImplicitVariables()
@@ -750,6 +750,7 @@ namespace ExpressionEvaluator.Tests
             Assert.AreEqual(true, ret);
 
             obj.Value = 10;
+            var test = obj.Value == 10;
             cc = new CompiledExpression() { StringToParse = "obj.Value == 10", TypeRegistry = registry };
             ret = cc.Eval();
             Assert.AreEqual(true, ret);
@@ -769,6 +770,98 @@ namespace ExpressionEvaluator.Tests
             ret = cc.Eval();
             Assert.AreEqual(true, ret);
         }
+
+        [TestMethod]
+        public void NullableType()
+        {
+            var expression = new CompiledExpression()
+            {
+                TypeRegistry = new TypeRegistry()
+            };
+
+            int? argument1 = 5;
+            var argument2 = new Fact()
+            {
+                Count = 5
+            };
+
+            expression.TypeRegistry.RegisterSymbol("Argument1", argument1, typeof(int?));
+            expression.TypeRegistry.RegisterSymbol("Argument2", argument2);
+
+            // Works
+            expression.StringToParse = "Argument2.Count != null";
+            expression.Eval();
+
+            // Fails with NullReferenceException
+            expression.StringToParse = "Argument1 != null";
+            expression.Eval();
+        }
+
+        [TestMethod]
+        public void OverloadedBinaryOperators()
+        {
+            var registry = new TypeRegistry();
+            var target = new CompiledExpression() { TypeRegistry = registry };
+
+            var x = new TypeWithOverloadedBinaryOperators(3);
+            registry.RegisterSymbol("x", x);
+
+            string y = "5";
+            Assert.IsFalse(x == y);
+            target.StringToParse = "x == y";
+            Assert.IsFalse(target.Compile<Func<string, bool>>("y")(y));
+
+            y = "3";
+            Assert.IsTrue(x == y);
+            target.StringToParse = "x == y";
+            Assert.IsTrue(target.Compile<Func<string, bool>>("y")(y));
+
+            target.StringToParse = "x == \"4\"";
+            Assert.IsFalse(target.Compile<Func<bool>>()());
+            target.StringToParse = "x == \"3\"";
+            Assert.IsTrue(target.Compile<Func<bool>>()());
+        }
+
+        struct TypeWithOverloadedBinaryOperators
+        {
+            private int _value;
+
+            public TypeWithOverloadedBinaryOperators(int value)
+            {
+                _value = value;
+            }
+
+            public static bool operator ==(TypeWithOverloadedBinaryOperators instance, string value)
+            {
+                return instance._value.ToString().Equals(value);
+            }
+
+            public static bool operator !=(TypeWithOverloadedBinaryOperators instance, string value)
+            {
+                return !instance._value.ToString().Equals(value);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj == null)
+                    return false;
+                if (obj is TypeWithOverloadedBinaryOperators)
+                {
+                    return this._value.Equals(((TypeWithOverloadedBinaryOperators)obj)._value);
+                }
+                return base.Equals(obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return _value.GetHashCode();
+            }
+        }
+    }
+
+    public class Fact
+    {
+        public int? Count { get; set; }
     }
 
     public class MyClass

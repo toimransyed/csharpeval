@@ -66,8 +66,22 @@ namespace ExpressionEvaluator
 
         public void RegisterSymbol(string identifier, object value)
         {
-            Add(identifier, value);
+            var type = value != null ? value.GetType() : typeof(object);
+            Add(identifier, new ValueType() { Type = type, Value = value });
         }
+
+        public void RegisterSymbol(string identifier, object value, Type type)
+        {
+            Add(identifier, new ValueType() { Type = type, Value = value });
+        }
+
+    }
+
+
+    public class ValueType
+    {
+        public Type Type { get; set; }
+        public object Value { get; set; }
     }
 
 }

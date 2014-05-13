@@ -15,8 +15,9 @@ namespace ExpressionEvaluator
 
     public abstract class ExpressionCompiler
     {
-        public Expression Expression = null;
+        public Expression Expression { get; set; }
         public CompiledExpressionType ExpressionType { get; set; }
+        public LambdaExpression LambdaExpression { get; set; }
 
         protected AntlrParser Parser = null;
         public TypeRegistry TypeRegistry { get; set; }
@@ -43,11 +44,6 @@ namespace ExpressionEvaluator
 
         protected abstract void ClearCompiledMethod();
 
-        protected void Parse()
-        {
-            BuildTree(null, false);
-        }
-
         public T Compile<T>(params string[] parameters)
         {
             var f = typeof (T);
@@ -56,6 +52,12 @@ namespace ExpressionEvaluator
             Parser.ExternalParameters = argParams;
             Expression = BuildTree();
             return Expression.Lambda<T>(Expression, argParams).Compile();
+        }
+
+        public void ScopeParse()
+        {
+            var scopeParam = Expression.Parameter(typeof(object), "scope");
+            Expression = BuildTree(scopeParam);
         }
 
         protected Expression WrapExpression(Expression source, bool castToObject)

@@ -14,7 +14,7 @@ namespace ExpressionEvaluator.Parser
         public Expression Scope { get; set; }
         public bool IsCall { get; set; }
         public LabelTarget ReturnTarget { get; set; }
-        public bool HasReturn { get; private set;  }
+        public bool HasReturn { get; private set; }
         public TypeRegistry TypeRegistry { get; set; }
 
         //partial void EnterRule(string ruleName, int ruleIndex)
@@ -32,16 +32,16 @@ namespace ExpressionEvaluator.Parser
         {
             base.ReportError(e);
             string message;
-            if (e.GetType() == typeof (MismatchedTokenException))
+            if (e.GetType() == typeof(MismatchedTokenException))
             {
-                var ex = (MismatchedTokenException) e;
+                var ex = (MismatchedTokenException)e;
                 message = string.Format("Mismatched token '{0}', expected {1}", e.Token.Text, ex.Expecting);
             }
             else
             {
                 message = string.Format("Error parsing token '{0}'", e.Token.Text);
             }
-            
+
             throw new ExpressionParseException(message, input);
 
             Console.WriteLine("Error in parser at line " + e.Line + ":" + e.CharPositionInLine);
@@ -57,12 +57,17 @@ namespace ExpressionEvaluator.Parser
             }
 
             object result = null;
-            
+
             if (TypeRegistry.TryGetValue(identifier, out result))
             {
+                if (result.GetType() == typeof(ValueType))
+                {
+                    var typeValue = (ValueType)result;
+                    return Expression.Constant(typeValue.Value, typeValue.Type);
+                }
                 return Expression.Constant(result);
             }
-            
+
             return null;
 
             // throw new UnknownIdentifierException(identifier);
