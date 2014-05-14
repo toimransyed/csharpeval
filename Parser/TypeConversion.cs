@@ -140,7 +140,7 @@ namespace ExpressionEvaluator.Parser
         {
             if (src.NodeType == ExpressionType.Constant && src.Type == typeof(object) && ((ConstantExpression)src).Value == null && Nullable.GetUnderlyingType(dest.Type) != null)
             {
-                return Expression.Constant(Activator.CreateInstance(dest.Type, dest.Type.GetConstructor(new[] { dest.Type })), dest.Type);
+                return Expression.Constant(Activator.CreateInstance(dest.Type), dest.Type);
             }
             return src;
         }
