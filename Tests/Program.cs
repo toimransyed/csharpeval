@@ -126,7 +126,11 @@ namespace Tests
         {
             var obj2 = new objHolder2();
             obj2.Value = 5;
-
+            Type t = Type.GetType("Mono.Runtime");
+            if (t != null)
+                Console.WriteLine("Mono.Runtime detected");
+            else
+                Console.WriteLine("Not Mono");
 
             var exp = "@ATADJ( @MAX( @SUBTR(@PR( 987043 ) , @AMT( 913000 ) ) , @MULT( @PR( 987043 ) , 0.20f ) ) , 60f ) ";
             var util = new Utility();

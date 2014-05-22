@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using ExpressionEvaluator.Parser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ExpressionEvaluator;
 using UnitTestProject1;
@@ -71,14 +72,14 @@ namespace ExpressionEvaluator.Tests
         //
         #endregion
 
-        //[TestMethod]
-        //[ExpectedException(typeof(Exception))]
-        //public void ParseInvalidNumericThrowsException()
-        //{
-        //    var str = "2.55 + 32";
-        //    var c = new CompiledExpression(str);
-        //    var ret = c.Eval();
-        //}
+        [TestMethod]
+        [ExpectedException(typeof(ExpressionParseException))]
+        public void ParseInvalidNumericThrowsException()
+        {
+            var str = "2.55DX";
+            var c = new CompiledExpression(str);
+            var ret = c.Eval();
+        }
 
         [TestMethod]
         public void UnderscoreVariables()
@@ -857,6 +858,34 @@ namespace ExpressionEvaluator.Tests
                 return _value.GetHashCode();
             }
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ExpressionParseException))]
+        public void ExpressionException()
+        {
+            var c = new CompiledExpression() ;
+            c.StringToParse = "(1 + 2))";
+            var result = c.Eval();
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ExpressionParseException))]
+        public void ExpressionException2()
+        {
+            var c = new CompiledExpression();
+            c.StringToParse = "25L +";
+            var result = c.Eval();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ExpressionParseException))]
+        public void ExpressionException3()
+        {
+            var c = new CompiledExpression();
+            c.StringToParse = "25.L";
+            var result = c.Eval();
+        }
     }
 
     public class Fact
@@ -885,6 +914,37 @@ namespace ExpressionEvaluator.Tests
         }
     }
 
+    public class P
+    {
+        public bool f1(ScopeDataType data)
+        {
+            return false;
+        }
+        public bool f2(ScopeDataType data)
+        {
+            return false;
+        }
+        public bool f3(ScopeDataType data)
+        {
+            return false;
+        }
+        public bool f4(ScopeDataType data)
+        {
+            return true;
+        }
+        //public Func<ScopeDataType, bool> f1 { get; set; }
+        //public Func<ScopeDataType, bool> f2 { get; set; }
+        //public Func<ScopeDataType, bool> f3 { get; set; }
+        //public Func<ScopeDataType, bool> f4 { get; set; }
+    }
+
+    public class ScopeDataType
+    {
+        public ScopeDataType data
+        {
+            get { return this; }
+        }
+    }
 
     public class objHolder
     {

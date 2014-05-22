@@ -14,6 +14,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{C9D08C31-B948-4A22-A061-123050496657}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{59E6DA53-9375-43A4-81E4-98AD83D79084}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "REPL", "REPL", "{8FD19312-03CB-4469-B335-4C91C1DA0CCD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "REPLSample", "Samples\REPLSample\REPLSample.csproj", "{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}"
+EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = ExpressionEvaluator.vsmdi
@@ -75,8 +81,27 @@ Global
 		{C9D08C31-B948-4A22-A061-123050496657}.TYPE_SAFE|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{C9D08C31-B948-4A22-A061-123050496657}.TYPE_SAFE|Mixed Platforms.Build.0 = Release|Any CPU
 		{C9D08C31-B948-4A22-A061-123050496657}.TYPE_SAFE|x86.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.Release|x86.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.TYPE_SAFE|Any CPU.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.TYPE_SAFE|Any CPU.Build.0 = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.TYPE_SAFE|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.TYPE_SAFE|Mixed Platforms.Build.0 = Release|Any CPU
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A}.TYPE_SAFE|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8FD19312-03CB-4469-B335-4C91C1DA0CCD} = {59E6DA53-9375-43A4-81E4-98AD83D79084}
+		{7C2A968A-F65F-4F5F-859E-9B6A2F9F8E2A} = {8FD19312-03CB-4469-B335-4C91C1DA0CCD}
 	EndGlobalSection
 EndGlobal

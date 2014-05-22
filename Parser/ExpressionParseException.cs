@@ -4,7 +4,7 @@ using Antlr.Runtime;
 namespace ExpressionEvaluator.Parser
 {
     [Serializable]
-    internal class ExpressionParseException : Exception
+    public class ExpressionParseException : Exception
     {
         private ITokenStream _tokenStream;
 

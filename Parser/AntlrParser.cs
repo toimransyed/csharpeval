@@ -39,7 +39,7 @@ namespace ExpressionEvaluator.Parser
             switch (ExpressionType)
             {
                 case CompiledExpressionType.Expression:
-                    Expression = parser.expression();
+                    Expression = parser.single_expression();
                     break;
                 case CompiledExpressionType.Statement:
                     var statement = parser.statement();

@@ -496,6 +496,10 @@ public statement_list returns [StatementList value]
 ///////////////////////////////////////////////////////
 //    Expression Section
 ///////////////////////////////////////////////////////    
+
+public single_expression returns [Expression value]: 
+	expression { $value = $expression.value; } EOF;
+
 public expression returns [Expression value]: 
     (unary_expression   assignment_operator) => assignment { $value = $assignment.value; }  \  
     | non_assignment_expression { value = $non_assignment_expression.value; }
