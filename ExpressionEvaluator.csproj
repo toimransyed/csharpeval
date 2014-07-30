@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CompiledExpression.cs" />
+    <Compile Include="CompiledExpressionType.cs" />
     <Compile Include="ExpressionCompiler.cs" />
     <Compile Include="obj\Debug\ExprEvalLexer.cs" />
     <Compile Include="obj\Debug\ExprEvalParser.cs" />

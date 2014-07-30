@@ -75,7 +75,6 @@ namespace ExpressionEvaluator.Parser
 
         }
 
-
         public static Expression Assign(Expression le, Expression re)
         {
             var type = le.Type;
@@ -552,6 +551,8 @@ namespace ExpressionEvaluator.Parser
                 }
 
                 var targetType = lastParam2.ParameterType.GetElementType();
+
+                if (targetType == null) targetType = lastParam2.ParameterType.GetGenericArguments().Single();
 
                 newArgs2.Add(Expression.NewArrayInit(targetType,
                                                      paramArgs2.Select(x => TypeConversion.Convert(x, targetType))));

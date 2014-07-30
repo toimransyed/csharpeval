@@ -31,7 +31,12 @@ namespace ExpressionEvaluator.Parser.Expressions
         {
             if (statement.GetType() == typeof(LocalVariableDeclaration))
             {
-                Variables.Add((LocalVariableDeclaration)statement);
+                var lvar = (LocalVariableDeclaration) statement;
+                Variables.Add(lvar);
+                foreach (var initializer in lvar.Initializers)
+                {
+                    Statements.Add(new Statement() { Expression = initializer });
+                }
             }
             else
             {
@@ -60,12 +65,6 @@ namespace ExpressionEvaluator.Parser.Expressions
             {
                 var variables = Variables;
                 parameters = variables.SelectMany(x => x.Variables).ToList();
-                var initializers = variables.SelectMany(x => x.Initializers).ToList();
-
-                if (initializers.Any())
-                {
-                    expressions.AddRange(initializers);
-                }
             }
 
             expressions.AddRange(Statements.Select(x => x.Expression));

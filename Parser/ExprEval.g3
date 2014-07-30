@@ -449,9 +449,10 @@ public type_arguments returns [List<Type> value]
     first=type { $value.Add(GetType($first.text)); } (',' succeeding=type { $value.Add(GetType($succeeding.text)); })* ;
 
 public type returns [TypeOrGeneric value]:
-      ((predefined_type | type_name)  rank_specifiers) => (predefined_type | type_name)   rank_specifiers   '*'*
+      ((predefined_type | type_name)  rank_specifiers) => (predefined_type | type_name)   rank_specifiers   '*'* 
     | ((predefined_type | type_name)  ('*'+ | '?')) => (predefined_type | type_name)   ('*'+ | '?')
-    | (predefined_type { $value = new TypeOrGeneric() { Identifier = $predefined_type.text }; }| type_name { $value = $type_name.value; })
+    | (predefined_type { $value = new TypeOrGeneric() { Identifier = $predefined_type.text }; }
+	| type_name { $value = $type_name.value; })
     | 'void' '*'+
     ;
 public non_nullable_type:

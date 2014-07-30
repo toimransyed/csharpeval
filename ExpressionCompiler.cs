@@ -6,13 +6,6 @@ using ExpressionEvaluator.Parser;
 
 namespace ExpressionEvaluator
 {
-    public enum CompiledExpressionType
-    {
-        Expression = 0,
-        Statement = 1,
-        StatementList = 2
-    }
-
     public abstract class ExpressionCompiler
     {
         public Expression Expression { get; set; }
